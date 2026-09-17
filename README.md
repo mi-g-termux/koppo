@@ -138,7 +138,7 @@ All UI strings live in `lib/i18n.ts` as a flat dictionary with `{ es, en }` leav
 
 ### Vercel (Recommended)
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Txemalon/3d-portfolio)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com)
 
 ### Docker / Self-Hosted
 
