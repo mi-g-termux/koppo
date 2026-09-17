@@ -2,7 +2,7 @@
 
 An immersive, interactive developer portfolio built with **Next.js 16**, **React Three Fiber**, and **Tailwind CSS v4**. Features a 3D mechanical keyboard hero scene, seasonal themes, smooth scroll animations, bilingual support (ES/EN), and a fully responsive design.
 
-**[Live Demo](https://txemaalbero.com)** &nbsp;|&nbsp; **Built by [Txema Albero](https://es.linkedin.com/in/jose-mar%C3%ADa-albero-belamendia-b9319a246)**
+
 
 ---
 
@@ -40,7 +40,7 @@ An immersive, interactive developer portfolio built with **Next.js 16**, **React
 
 ```bash
 # Clone the repository
-git clone https://github.com/Txemalon/3d-portfolio.git
+git clone https://github.com/
 cd 3d-portfolio
 
 # Install dependencies
@@ -164,6 +164,6 @@ This project is open source and available under the [MIT License](LICENSE).
 
 **Jose Maria Albero Belamendia (Txema)**
 
-- [LinkedIn](https://es.linkedin.com/in/jose-mar%C3%ADa-albero-belamendia-b9319a246)
-- [GitHub](https://github.com/Txemalon)
-- [X / Twitter](https://x.com/Txemalon)
+- [LinkedIn](https://es.linkedin.com/in/
+- [GitHub](https://github.com/)
+- [X / Twitter](https://x.com/)
