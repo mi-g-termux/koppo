@@ -226,9 +226,9 @@ function createExtrudedBox(
     bevelEnabled: bevelSize > 0,
     bevelThickness: bevelSize,
     bevelSize: bevelSize,
-    bevelSegments: 2,
+    bevelSegments: 1,
     steps: 1,
-    curveSegments: 12,
+    curveSegments: 6,
   });
   geometry.rotateX(-Math.PI / 2);
   geometry.translate(0, -height / 2 + bevelSize, 0);
@@ -248,12 +248,19 @@ function createExtrudedBox(
   return geometry;
 }
 
+// Global texture cache to prevent creating duplicate textures per render
+const iconTextureCache = new Map<string, THREE.CanvasTexture>();
+
 // Render a simple-icons SVG path into a square CanvasTexture.
 function makeIconTexture(
   svgPath: string,
   color: string,
   size = 256
 ): THREE.CanvasTexture {
+  const key = `${svgPath}_${color}_${size}`;
+  const existing = iconTextureCache.get(key);
+  if (existing) return existing;
+
   const canvas = document.createElement("canvas");
   canvas.width = size;
   canvas.height = size;
@@ -272,8 +279,9 @@ function makeIconTexture(
 
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = 4;
+  tex.anisotropy = 2;
   tex.needsUpdate = true;
+  iconTextureCache.set(key, tex);
   return tex;
 }
 
@@ -423,7 +431,7 @@ function Keycap({
   const pressY = useRef(0);
   const liftAmp = useRef(0); // smoothed 0..1 gate for the bounce + glow
   const contactAmp = useRef(0); // smoothed 0..1 gate for the random idle bob
-  const matRef = useRef<THREE.MeshPhysicalMaterial>(null);
+  const matRef = useRef<THREE.MeshStandardMaterial>(null);
   const baseEmissive = 0.3;
 
   // Each key gets its own random frequency + phase, stable across re-renders
@@ -555,14 +563,11 @@ function Keycap({
           onPointerUp={isMobile ? handleUp : undefined}
           onPointerCancel={isMobile ? handleUp : undefined}
         >
-          <meshPhysicalMaterial
+          <meshStandardMaterial
             ref={matRef}
             color="#ffffff"
-            transmission={0}
             roughness={0.32}
-            clearcoat={isMobile ? 0 : 0.5}
-            clearcoatRoughness={0.18}
-            metalness={0}
+            metalness={0.02}
             emissive="#ffffff"
             emissiveIntensity={0.3}
           />
@@ -825,11 +830,12 @@ export default function FrozenKeyboard({
           ? { position: [0, 2.0, 9.0], fov: 26 }
           : { position: [1.5, 3.6, 11], fov: 22 }
       }
-      dpr={mobile ? [1, 1.5] : [1, 2]}
+      dpr={mobile ? [1, 1.25] : [1, 1.5]}
       gl={{
         antialias: true,
         alpha: true,
         powerPreference: "high-performance",
+        precision: "mediump",
       }}
     >
       {/* Canvas is transparent so the FrozenBackground (snow + aurora) shows
@@ -838,7 +844,7 @@ export default function FrozenKeyboard({
       {/* Local environment map built from Lightformer quads — no external
           HDR fetch, so the scene works offline. Gives the glass keycaps
           soft icy highlights without relying on drei's CDN. */}
-      <Environment resolution={128} environmentIntensity={0.25}>
+      <Environment resolution={64} environmentIntensity={0.25}>
         <Lightformer
           intensity={1.1}
           color="#ffffff"

@@ -29,6 +29,20 @@ const nextConfig: NextConfig = {
   // Disables the Next.js development indicator / logo badge in dev mode
   devIndicators: false,
 
+  compress: true,
+  poweredByHeader: false,
+  reactStrictMode: true,
+
+  experimental: {
+    optimizePackageImports: [
+      "lucide-react",
+      "three",
+      "@react-three/drei",
+      "@react-three/fiber",
+      "simple-icons",
+    ],
+  },
+
   // Emits a minimal server bundle at `.next/standalone/` so the Docker
   // runtime image can drop npm/node_modules entirely and just run
   // `node server.js`. Trims the final image to ~100 MB.

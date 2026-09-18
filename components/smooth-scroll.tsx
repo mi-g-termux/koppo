@@ -12,11 +12,11 @@ export default function SmoothScroll({ children }: { children: ReactNode }) {
     <ReactLenis
       root
       options={{
-        duration: 1.4,
+        duration: 0.85,
         easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
         smoothWheel: true,
-        wheelMultiplier: 1,
-        touchMultiplier: 1.4,
+        wheelMultiplier: 1.15,
+        touchMultiplier: 1.2,
       }}
     >
       {children}

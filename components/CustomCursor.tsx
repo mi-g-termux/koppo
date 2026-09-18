@@ -24,12 +24,26 @@ export default function CustomCursor() {
     let hovered = false;
     let raf = 0;
 
+    const tick = () => {
+      hx += (mx - hx) * 0.22;
+      hy += (my - hy) * 0.22;
+      halo.style.transform = `translate3d(${hx}px, ${hy}px, 0) translate(-50%, -50%)`;
+      if (Math.abs(mx - hx) > 0.1 || Math.abs(my - hy) > 0.1) {
+        raf = requestAnimationFrame(tick);
+      } else {
+        raf = 0;
+      }
+    };
+
     const onMove = (e: MouseEvent) => {
       mx = e.clientX;
       my = e.clientY;
       if (!visible) {
         visible = true;
         halo.style.opacity = "1";
+      }
+      if (!raf) {
+        raf = requestAnimationFrame(tick);
       }
     };
 
@@ -50,15 +64,8 @@ export default function CustomCursor() {
       halo.style.opacity = "0";
     };
 
-    const tick = () => {
-      hx += (mx - hx) * 0.18;
-      hy += (my - hy) * 0.18;
-      halo.style.transform = `translate3d(${hx}px, ${hy}px, 0) translate(-50%, -50%)`;
-      raf = requestAnimationFrame(tick);
-    };
-
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseover", onOver);
+    window.addEventListener("mousemove", onMove, { passive: true });
+    window.addEventListener("mouseover", onOver, { passive: true });
     document.addEventListener("mouseleave", onLeave);
     raf = requestAnimationFrame(tick);
 

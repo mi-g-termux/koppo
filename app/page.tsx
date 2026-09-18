@@ -1,7 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import FrozenKeyboard from "@/components/FrozenKeyboard";
+import dynamic from "next/dynamic";
+
+const FrozenKeyboard = dynamic(() => import("@/components/FrozenKeyboard"), {
+  ssr: false,
+});
 import SmoothScroll from "@/components/smooth-scroll";
 import Reveal from "@/components/Reveal";
 import SectionNav from "@/components/SectionNav";
@@ -35,8 +39,6 @@ const GITHUB = "https://github.com/mirlabss";
 const INSTAGRAM = "https://www.instagram.com/mir.labs/";
 const LINKEDIN = "https://www.linkedin.com/in/mir-labs-346860437/";
 const WHATSAPP = "https://wa.me/8801322205149";
-
-type Localised = { es: string; en: string };
 
 type Project = ProjectDetail & {
   align: "left" | "right";
@@ -221,59 +223,6 @@ const crazyOffers = [
     title: "30 Days Free Support",
     desc: "Post-launch bug fixes, performance monitoring, and tweaks included free.",
     highlight: "Ongoing Care",
-  },
-];
-
-const experiences: Array<{
-  role: Localised;
-  company: string;
-  period: Localised;
-  location: Localised;
-  summary: Localised;
-  bullets: Localised[];
-  stack: string[];
-}> = [
-  {
-    role: {
-      es: "Full-stack Developer & AI Automation Specialist",
-      en: "Full-stack Developer & AI Automation Specialist",
-    },
-    company: "MIR Labs",
-    period: { es: "Building now", en: "Building now" },
-    location: { es: "Bangladesh", en: "Bangladesh" },
-    summary: {
-      es: "I build functional, real-world software with a strong focus on web products, AI-driven workflow automation with n8n, and considered user interfaces.",
-      en: "I build functional, real-world software with a strong focus on web products, AI-driven workflow automation with n8n, and considered user interfaces.",
-    },
-    bullets: [
-      {
-        es: "AI automation workflows and webhook integrations built using n8n and custom APIs.",
-        en: "AI automation workflows and webhook integrations built using n8n and custom APIs.",
-      },
-      {
-        es: "E-commerce flows with payment, invoice and courier automation.",
-        en: "E-commerce flows with payment, invoice and courier automation.",
-      },
-      {
-        es: "Admin panels and dashboards that turn complex business operations into clear workflows.",
-        en: "Admin panels and dashboards that turn complex business operations into clear workflows.",
-      },
-      {
-        es: "Responsive interfaces with animation, polish and practical performance.",
-        en: "Responsive interfaces with animation, polish and practical performance.",
-      },
-    ],
-    stack: [
-      "n8n",
-      "AI Automation",
-      "JavaScript",
-      "TypeScript",
-      "React",
-      "Next.js",
-      "Node.js",
-      "Python",
-      "Git",
-    ],
   },
 ];
 

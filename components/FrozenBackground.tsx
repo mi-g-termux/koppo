@@ -32,7 +32,7 @@ export default function FrozenBackground() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = Math.min(window.devicePixelRatio || 1, 1.25);
     let w = window.innerWidth;
     let h = window.innerHeight;
 
@@ -50,8 +50,8 @@ export default function FrozenBackground() {
     let flakes: Flake[] = [];
 
     const seed = () => {
-      // Density tuned to viewport area, capped on either end.
-      const target = Math.min(140, Math.max(50, Math.floor((w * h) / 18000)));
+      // Density tuned to viewport area, capped for optimal frame rate.
+      const target = Math.min(60, Math.max(25, Math.floor((w * h) / 36000)));
       flakes = Array.from({ length: target }, () => makeFlake(true));
     };
 
