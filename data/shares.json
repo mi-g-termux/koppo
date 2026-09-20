@@ -1,5 +1,30 @@
 [
   {
+    "id": "share_fly_to_cart",
+    "slug": "fly-to-cart",
+    "title": "Fly-to-Cart Interactive Animation & Source Code",
+    "description": "Full source code for the high-conversion Fly-to-Cart e-commerce micro-interaction with parabolic bezier curve animation, particle burst, and responsive mobile support.",
+    "language": "tsx",
+    "codeSnippet": "// Fly-to-Cart Micro-Interaction Hook & Component\nimport React, { useState, useRef } from \"react\";\n\nexport interface FlyItem {\n  id: string;\n  startX: number;\n  startY: number;\n  targetX: number;\n  targetY: number;\n  image: string;\n}\n\nexport function useFlyToCart() {\n  const [flyingItems, setFlyingItems] = useState<FlyItem[]>([]);\n\n  const triggerFly = (\n    sourceEl: HTMLElement,\n    targetEl: HTMLElement,\n    imageUrl: string\n  ) => {\n    const sourceRect = sourceEl.getBoundingClientRect();\n    const targetRect = targetEl.getBoundingClientRect();\n\n    const newItem: FlyItem = {\n      id: Math.random().toString(36).substring(7),\n      startX: sourceRect.left + sourceRect.width / 2,\n      startY: sourceRect.top + sourceRect.height / 2,\n      targetX: targetRect.left + targetRect.width / 2,\n      targetY: targetRect.top + targetRect.height / 2,\n      image: imageUrl,\n    };\n\n    setFlyingItems((prev) => [...prev, newItem]);\n\n    setTimeout(() => {\n      setFlyingItems((prev) => prev.filter((item) => item.id !== newItem.id));\n    }, 900);\n  };\n\n  return { flyingItems, triggerFly };\n}",
+    "fileUrl": "",
+    "fileName": "fly-to-cart-source.zip",
+    "fileSize": "8.4 MB",
+    "tags": [
+      "React",
+      "Animation",
+      "Next.js",
+      "TailwindCSS",
+      "E-Commerce"
+    ],
+    "views": 64,
+    "downloads": 29,
+    "createdAt": "2026-09-20T08:44:21.896Z",
+    "updatedAt": "2026-09-20T08:44:21.896Z",
+    "isPublic": true,
+    "authorName": "MIR Labs",
+    "authorInstagram": "https://www.instagram.com/mir.labs/"
+  },
+  {
     "id": "share_threejs_keyboard",
     "slug": "threejs-keyboard-3d",
     "title": "Three.js 3D Interactive Frozen Keyboard Component",

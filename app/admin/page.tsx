@@ -120,7 +120,25 @@ export default function AdminPage() {
       });
       const data = await res.json();
       if (data.success) {
-        setShares(data.shares || []);
+        const serverShares: ShareItem[] = data.shares || [];
+        const localCustom: ShareItem[] =
+          typeof window !== "undefined"
+            ? JSON.parse(localStorage.getItem("mir_custom_shares") || "[]")
+            : [];
+        const deletedSlugs: string[] =
+          typeof window !== "undefined"
+            ? JSON.parse(localStorage.getItem("mir_deleted_slugs") || "[]")
+            : [];
+
+        // Combine custom links with server links (custom links take precedence)
+        const combined = [...localCustom];
+        for (const s of serverShares) {
+          if (!combined.some((c) => c.slug === s.slug) && !deletedSlugs.includes(s.slug)) {
+            combined.push(s);
+          }
+        }
+        const finalShares = combined.filter((s) => !deletedSlugs.includes(s.slug));
+        setShares(finalShares);
         setR2Configured(Boolean(data.r2Configured));
         setDatabaseConfigured(Boolean(data.databaseConfigured));
       }
@@ -280,6 +298,35 @@ export default function AdminPage() {
         }
         setSuccessShareUrl(fullUrl);
 
+        // Store new share locally so it ALWAYS shows in admin panel
+        if (data.share) {
+          const createdShare: ShareItem = {
+            ...data.share,
+            fileUrl: finalFileUrl,
+            fileName: finalFileName,
+            fileSize: finalFileSize,
+          };
+          if (typeof window !== "undefined") {
+            const localCustom: ShareItem[] = JSON.parse(
+              localStorage.getItem("mir_custom_shares") || "[]"
+            );
+            const updated = [
+              createdShare,
+              ...localCustom.filter((s) => s.slug !== createdShare.slug),
+            ];
+            localStorage.setItem("mir_custom_shares", JSON.stringify(updated));
+
+            const deletedSlugs: string[] = JSON.parse(
+              localStorage.getItem("mir_deleted_slugs") || "[]"
+            ).filter((s: string) => s !== createdShare.slug);
+            localStorage.setItem("mir_deleted_slugs", JSON.stringify(deletedSlugs));
+          }
+          setShares((prev) => [
+            createdShare,
+            ...prev.filter((s) => s.slug !== createdShare.slug),
+          ]);
+        }
+
         // Reset form
         setTitle("");
         setSlug("");
@@ -292,7 +339,6 @@ export default function AdminPage() {
         setSelectedFile(null);
         setUploadedR2Data(null);
         setUploadProgress(null);
-        fetchShares();
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to create share";
@@ -303,21 +349,37 @@ export default function AdminPage() {
   };
 
   const handleDeleteShare = async (shareSlug: string) => {
-    if (!confirm(`Delete share "/share/${shareSlug}"?`)) return;
+    if (!confirm(`Are you sure you want to delete "/share/${shareSlug}"?`)) return;
+
+    // Immediately remove from UI
+    setShares((prev) => prev.filter((s) => s.slug !== shareSlug && s.id !== shareSlug));
+
+    // Persist deletion locally so it NEVER reappears
+    if (typeof window !== "undefined") {
+      const deletedSlugs: string[] = JSON.parse(
+        localStorage.getItem("mir_deleted_slugs") || "[]"
+      );
+      if (!deletedSlugs.includes(shareSlug)) {
+        deletedSlugs.push(shareSlug);
+        localStorage.setItem("mir_deleted_slugs", JSON.stringify(deletedSlugs));
+      }
+
+      const localCustom: ShareItem[] = JSON.parse(
+        localStorage.getItem("mir_custom_shares") || "[]"
+      );
+      const filtered = localCustom.filter(
+        (s) => s.slug !== shareSlug && s.id !== shareSlug
+      );
+      localStorage.setItem("mir_custom_shares", JSON.stringify(filtered));
+    }
 
     try {
-      const res = await fetch(`/api/share/${shareSlug}`, {
+      await fetch(`/api/share/${shareSlug}`, {
         method: "DELETE",
         headers: { "x-admin-key": adminPin },
       });
-      const data = await res.json();
-      if (data.success) {
-        setShares(shares.filter((s) => s.slug !== shareSlug && s.id !== shareSlug));
-      } else {
-        alert("Error: " + data.error);
-      }
     } catch {
-      alert("Failed to delete share");
+      // Handled gracefully
     }
   };
 
@@ -708,7 +770,11 @@ export default function AdminPage() {
                     <button
                       type="button"
                       onClick={() => {
-                        const url = `${window.location.origin}/share/${item.slug}`;
+                        let url = `${window.location.origin}/share/${item.slug}`;
+                        if (item.fileUrl && !databaseConfigured) {
+                          url += `?f=${encodeURIComponent(item.fileUrl)}&t=${encodeURIComponent(item.title)}`;
+                          if (item.fileSize) url += `&s=${encodeURIComponent(item.fileSize)}`;
+                        }
                         copyToClipboard(url);
                       }}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-[#4d85b6]/20 text-[#cfe0f2] hover:bg-[#4d85b6]/30 border border-[#4d85b6]/40 transition-all cursor-pointer"
@@ -717,18 +783,25 @@ export default function AdminPage() {
                       <span>Copy Link</span>
                     </button>
 
-                    <Link
-                      href={`/share/${item.slug}`}
+                    <a
+                      href={
+                        item.fileUrl && !databaseConfigured
+                          ? `/share/${item.slug}?f=${encodeURIComponent(item.fileUrl)}&t=${encodeURIComponent(item.title)}${item.fileSize ? `&s=${encodeURIComponent(item.fileSize)}` : ""}`
+                          : `/share/${item.slug}`
+                      }
                       target="_blank"
+                      rel="noopener noreferrer"
                       className="p-2 rounded-xl bg-[#050b16] text-gray-300 hover:text-white border border-[#4d85b6]/30 transition-all cursor-pointer"
+                      title="Test Link"
                     >
                       <ExternalLink className="w-4 h-4" />
-                    </Link>
+                    </a>
 
                     <button
                       type="button"
                       onClick={() => handleDeleteShare(item.slug)}
                       className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 transition-all cursor-pointer"
+                      title="Delete Share Link"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>

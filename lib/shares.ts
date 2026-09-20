@@ -292,15 +292,8 @@ export async function getAllShares(): Promise<ShareItem[]> {
   if (isKVConfigured()) {
     try {
       const kvShares = await loadSharesFromKV();
-      if (kvShares && Array.isArray(kvShares) && kvShares.length > 0) {
-        const kvSlugs = new Set(kvShares.map((s) => s.slug));
-        const merged = [...kvShares];
-        for (const init of INITIAL_SHARES) {
-          if (!kvSlugs.has(init.slug)) {
-            merged.push(init);
-          }
-        }
-        inMemoryShares = merged;
+      if (kvShares && Array.isArray(kvShares)) {
+        inMemoryShares = kvShares;
         return inMemoryShares;
       }
     } catch (err) {
@@ -312,16 +305,8 @@ export async function getAllShares(): Promise<ShareItem[]> {
   if (isR2Configured()) {
     try {
       const r2Shares = await loadSharesFromR2();
-      if (r2Shares && Array.isArray(r2Shares) && r2Shares.length > 0) {
-        // Merge with initial shares so defaults always exist
-        const r2Slugs = new Set((r2Shares as ShareItem[]).map((s) => s.slug));
-        const merged = [...(r2Shares as ShareItem[])];
-        for (const init of INITIAL_SHARES) {
-          if (!r2Slugs.has(init.slug)) {
-            merged.push(init);
-          }
-        }
-        inMemoryShares = merged;
+      if (r2Shares && Array.isArray(r2Shares)) {
+        inMemoryShares = r2Shares as ShareItem[];
         return inMemoryShares;
       }
     } catch (err) {
