@@ -11,8 +11,6 @@ import {
   Eye,
   Calendar,
   ArrowRight,
-  Tag,
-  Filter,
 } from "lucide-react";
 
 interface ShareSearchListProps {

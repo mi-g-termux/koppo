@@ -33,10 +33,11 @@ export async function GET(
       success: true,
       share,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : "Failed to fetch share";
     console.error("API GET /api/share/[slug] error:", err);
     return NextResponse.json(
-      { success: false, error: err.message || "Failed to fetch share" },
+      { success: false, error: errorMsg },
       { status: 500 }
     );
   }
@@ -76,10 +77,11 @@ export async function DELETE(
       success: deleted,
       message: deleted ? "Share deleted successfully." : "Failed to delete.",
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : "Failed to delete share";
     console.error("API DELETE /api/share/[slug] error:", err);
     return NextResponse.json(
-      { success: false, error: err.message || "Failed to delete share" },
+      { success: false, error: errorMsg },
       { status: 500 }
     );
   }

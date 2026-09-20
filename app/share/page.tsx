@@ -3,18 +3,7 @@ import Link from "next/link";
 import { getAllShares } from "@/lib/shares";
 import ShareHeader from "@/components/ShareHeader";
 import ShareFooter from "@/components/ShareFooter";
-import {
-  Code2,
-  FileArchive,
-  Download,
-  Eye,
-  Calendar,
-  Sparkles,
-  ArrowRight,
-  ShieldCheck,
-  Plus,
-  Terminal,
-} from "lucide-react";
+import { Sparkles, Plus } from "lucide-react";
 import ShareSearchList from "@/components/ShareSearchList";
 
 export const metadata: Metadata = {

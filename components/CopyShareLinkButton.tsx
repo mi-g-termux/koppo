@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Copy, Check, Share2 } from "lucide-react";
+import { Check, Share2 } from "lucide-react";
 
 interface CopyShareLinkButtonProps {
   slug: string;
@@ -22,7 +22,7 @@ export default function CopyShareLinkButton({ slug, title }: CopyShareLinkButton
           url,
         });
         return;
-      } catch (err) {
+      } catch {
         // Fallback to copy if user cancelled or unsupported
       }
     }
@@ -31,8 +31,8 @@ export default function CopyShareLinkButton({ slug, title }: CopyShareLinkButton
       await navigator.clipboard.writeText(url);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error("Failed to copy link:", err);
+    } catch {
+      // Ignore clipboard error
     }
   };
 

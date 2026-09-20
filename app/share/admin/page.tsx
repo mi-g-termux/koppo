@@ -5,7 +5,6 @@ import Link from "next/link";
 import ShareHeader from "@/components/ShareHeader";
 import ShareFooter from "@/components/ShareFooter";
 import {
-  ShieldCheck,
   KeyRound,
   Plus,
   FileArchive,
@@ -18,8 +17,6 @@ import {
   Eye,
   Download,
   Sparkles,
-  Link2,
-  HelpCircle,
   AlertCircle,
   RefreshCw,
   FolderOpen,
@@ -105,7 +102,7 @@ export default function ShareAdminPage() {
         setShares(data.shares || []);
         setR2Configured(Boolean(data.r2Configured));
       }
-    } catch (err) {
+    } catch {
       setAuthError("Failed to connect to API server.");
     }
   };
@@ -121,8 +118,8 @@ export default function ShareAdminPage() {
         setShares(data.shares || []);
         setR2Configured(Boolean(data.r2Configured));
       }
-    } catch (err) {
-      console.error(err);
+    } catch (err: unknown) {
+      console.error("fetchShares error:", err);
     } finally {
       setLoadingShares(false);
     }
@@ -212,8 +209,9 @@ export default function ShareAdminPage() {
       };
 
       xhr.send(file);
-    } catch (err: any) {
-      alert("Error: " + err.message);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Upload failed";
+      alert("Error: " + msg);
       setUploadProgress(null);
     }
   };
@@ -287,8 +285,9 @@ export default function ShareAdminPage() {
         setManualFileSize("");
         fetchShares();
       }
-    } catch (err: any) {
-      alert("Failed to create share: " + err.message);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to create share";
+      alert("Failed to create share: " + msg);
     } finally {
       setSubmitting(false);
     }
@@ -309,7 +308,7 @@ export default function ShareAdminPage() {
       } else {
         alert("Error deleting: " + data.error);
       }
-    } catch (err: any) {
+    } catch {
       alert("Failed to delete share");
     }
   };

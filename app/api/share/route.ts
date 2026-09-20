@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAllShares, createShare, ShareItem } from "@/lib/shares";
+import { getAllShares, createShare } from "@/lib/shares";
 import { isR2Configured } from "@/lib/r2";
 
 // Verify admin pin if provided
@@ -22,10 +22,11 @@ export async function GET(request: NextRequest) {
       shares: filtered,
       r2Configured: isR2Configured(),
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : "Failed to fetch shares";
     console.error("API GET /api/share error:", err);
     return NextResponse.json(
-      { success: false, error: err.message || "Failed to fetch shares" },
+      { success: false, error: errorMsg },
       { status: 500 }
     );
   }
@@ -63,10 +64,12 @@ export async function POST(request: NextRequest) {
       fileName: body.fileName || "",
       fileSize: body.fileSize || "",
       fileKey: body.fileKey || "",
-      tags: Array.isArray(body.tags) ? body.tags : (body.tags ? body.tags.split(",").map((t: string) => t.trim()) : []),
+      tags: Array.isArray(body.tags)
+        ? (body.tags as string[])
+        : (typeof body.tags === "string" ? body.tags.split(",").map((t: string) => t.trim()) : []),
       isPublic: body.isPublic !== undefined ? Boolean(body.isPublic) : true,
       authorName: body.authorName || "MIR Labs",
-      authorInstagram: body.authorInstagram || "https://instagram.com",
+      authorInstagram: body.authorInstagram || "https://www.instagram.com/mir.labs/",
     });
 
     return NextResponse.json({
@@ -74,10 +77,11 @@ export async function POST(request: NextRequest) {
       share: newShare,
       shareUrl: `/share/${newShare.slug}`,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : "Failed to create share";
     console.error("API POST /api/share error:", err);
     return NextResponse.json(
-      { success: false, error: err.message || "Failed to create share" },
+      { success: false, error: errorMsg },
       { status: 500 }
     );
   }

@@ -7,14 +7,10 @@ import ShareHeader from "@/components/ShareHeader";
 import ShareFooter from "@/components/ShareFooter";
 import {
   Download,
-  Share2,
   Calendar,
   Eye,
   FileArchive,
   ArrowLeft,
-  Sparkles,
-  ExternalLink,
-  CheckCircle2,
   Tag,
 } from "lucide-react";
 import CopyShareLinkButton from "@/components/CopyShareLinkButton";

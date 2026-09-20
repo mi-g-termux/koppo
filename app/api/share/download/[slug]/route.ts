@@ -50,10 +50,11 @@ export async function GET(
 
     // Redirect to the direct file URL
     return NextResponse.redirect(directDownloadUrl);
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : "Failed to process download";
     console.error("API GET /api/share/download/[slug] error:", err);
     return NextResponse.json(
-      { success: false, error: err.message || "Failed to process download" },
+      { success: false, error: errorMsg },
       { status: 500 }
     );
   }

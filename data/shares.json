@@ -1,0 +1,51 @@
+[
+  {
+    "id": "share_threejs_keyboard",
+    "slug": "threejs-keyboard-3d",
+    "title": "Three.js 3D Interactive Frozen Keyboard Component",
+    "description": "Full source code for the custom Three.js + React Three Fiber 3D interactive keyboard featuring dynamic lighting, spring physics, and seasonal shaders.",
+    "language": "tsx",
+    "codeSnippet": "// Three.js Interactive Frozen Keyboard Hook & Scene\nimport { Canvas } from \"@react-three/fiber\";\nimport { Float, OrbitControls, MeshReflectorMaterial } from \"@react-three/drei\";\nimport { Suspense, useRef } from \"react\";\nimport * as THREE from \"three\";\n\nexport function Keyboard3DShowcase() {\n  return (\n    <div className=\"w-full h-[500px] relative rounded-2xl overflow-hidden bg-ink-0 border border-ice-500/20 shadow-2xl\">\n      <Canvas camera={{ position: [0, 6, 9], fov: 45 }}>\n        <ambientLight intensity={0.7} />\n        <directionalLight position={[10, 15, 10]} intensity={1.5} color=\"#cfe0f2\" />\n        <pointLight position={[-5, 5, -5]} color=\"#4d85b6\" intensity={2} />\n        <Suspense fallback={null}>\n          <Float speed={1.5} rotationIntensity={0.2} floatIntensity={0.5}>\n            {/* 3D Keyboard Scene Geometry */}\n            <mesh rotation={[-Math.PI / 8, 0, 0]}>\n              <boxGeometry args={[6.2, 0.4, 2.8]} />\n              <meshStandardMaterial\n                color=\"#0a1428\"\n                metalness={0.8}\n                roughness={0.2}\n                emissive=\"#1f4874\"\n                emissiveIntensity={0.2}\n              />\n            </mesh>\n          </Float>\n        </Suspense>\n        <OrbitControls enableZoom={false} maxPolarAngle={Math.PI / 2.2} />\n      </Canvas>\n    </div>\n  );\n}",
+    "fileUrl": "",
+    "fileName": "threejs-frozen-keyboard-source.zip",
+    "fileSize": "14.8 MB",
+    "tags": [
+      "Three.js",
+      "React Three Fiber",
+      "Next.js",
+      "TypeScript",
+      "TailwindCSS"
+    ],
+    "views": 142,
+    "downloads": 58,
+    "createdAt": "2026-09-20T08:44:21.896Z",
+    "updatedAt": "2026-09-20T08:44:21.897Z",
+    "isPublic": true,
+    "authorName": "MIR Labs",
+    "authorInstagram": "https://www.instagram.com/mir.labs/"
+  },
+  {
+    "id": "share_auth_starter",
+    "slug": "nextjs-fullstack-starter",
+    "title": "Next.js 15 Full-Stack Glassmorphism Starter Pack",
+    "description": "Production-ready starter boilerplate with dark glassmorphism styling, season switching, Lucide icons, and responsive layouts.",
+    "language": "typescript",
+    "codeSnippet": "// lib/theme-engine.ts\nexport type ThemeSeason = \"winter\" | \"spring\" | \"summer\" | \"autumn\";\n\nexport function applyThemeSeason(season: ThemeSeason) {\n  if (typeof document === \"undefined\") return;\n  const root = document.documentElement;\n  root.setAttribute(\"data-season\", season);\n  localStorage.setItem(\"user-preferred-season\", season);\n}\n\nexport function getInitialTheme(): ThemeSeason {\n  if (typeof window === \"undefined\") return \"winter\";\n  const stored = localStorage.getItem(\"user-preferred-season\") as ThemeSeason | null;\n  return stored || \"winter\";\n}",
+    "fileUrl": "",
+    "fileName": "nextjs-glass-template.zip",
+    "fileSize": "32.1 MB",
+    "tags": [
+      "Next.js 15",
+      "Boilerplate",
+      "Full-Stack",
+      "Design System"
+    ],
+    "views": 89,
+    "downloads": 34,
+    "createdAt": "2026-09-20T08:44:21.897Z",
+    "updatedAt": "2026-09-20T08:44:21.897Z",
+    "isPublic": true,
+    "authorName": "MIR Labs",
+    "authorInstagram": "https://www.instagram.com/mir.labs/"
+  }
+]

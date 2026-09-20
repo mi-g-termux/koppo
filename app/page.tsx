@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 
 const FrozenKeyboard = dynamic(() => import("@/components/FrozenKeyboard"), {
   ssr: false,
@@ -305,10 +306,10 @@ export default function Home() {
           <div className="flex items-center gap-2 pointer-events-auto">
             <SeasonPicker />
             <span className="hidden sm:inline-flex">
-              <a href="/share" data-cursor="hover" className="frost-btn !py-1.5 !px-3 !text-xs flex items-center gap-1.5">
+              <Link href="/share" data-cursor="hover" className="frost-btn !py-1.5 !px-3 !text-xs flex items-center gap-1.5">
                 <Code className="w-3.5 h-3.5 text-ice-400" />
                 <span>Code Vault</span>
-              </a>
+              </Link>
             </span>
             <span className="hidden md:inline-flex">
               <a href={GITHUB} target="_blank" rel="noopener noreferrer" data-cursor="hover" className="frost-btn !py-1.5 !px-3 !text-xs">
@@ -636,10 +637,10 @@ export default function Home() {
                     <WhatsappIcon />
                     <span>WhatsApp</span>
                   </a>
-                  <a href="/share" data-cursor="hover" className="frost-btn !py-2 !px-3.5 !text-xs flex items-center gap-1.5">
+                  <Link href="/share" data-cursor="hover" className="frost-btn !py-2 !px-3.5 !text-xs flex items-center gap-1.5">
                     <Code className="w-3.5 h-3.5 text-ice-400" />
                     <span>Code Vault</span>
-                  </a>
+                  </Link>
                   <a href={GITHUB} target="_blank" rel="noopener noreferrer" data-cursor="hover" className="frost-btn !py-2 !px-3.5 !text-xs flex items-center gap-1.5">
                     <GithubIcon />
                     <span>{t("contact.github")}</span>

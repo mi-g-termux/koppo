@@ -1,13 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { Sparkles, ArrowLeft, ExternalLink, ShieldCheck, Terminal } from "lucide-react";
+import { Sparkles, ExternalLink, ShieldCheck } from "lucide-react";
 
-interface ShareHeaderProps {
-  customTitle?: string;
-}
-
-export default function ShareHeader({ customTitle }: ShareHeaderProps) {
+export default function ShareHeader() {
   return (
     <header className="sticky top-0 z-40 w-full backdrop-blur-xl bg-ink-0/80 border-b border-ice-500/15 transition-all">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">

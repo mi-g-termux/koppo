@@ -13,7 +13,7 @@ import "prismjs/components/prism-bash";
 import "prismjs/components/prism-rust";
 import "prismjs/components/prism-go";
 import "prismjs/components/prism-sql";
-import { Check, Copy, Code2, Maximize2, Minimize2, FileCode } from "lucide-react";
+import { Check, Copy, Maximize2, Minimize2, FileCode } from "lucide-react";
 
 interface CodeViewerProps {
   code: string;
