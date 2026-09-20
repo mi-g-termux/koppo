@@ -12,14 +12,17 @@ function verifyAdmin(request: NextRequest): boolean {
 export async function GET(request: NextRequest) {
   try {
     const isAdmin = verifyAdmin(request);
+    if (!isAdmin) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized. Incorrect password." },
+        { status: 401 }
+      );
+    }
+
     const shares = getAllShares();
-
-    // If not admin, return only public shares
-    const filtered = isAdmin ? shares : shares.filter((s) => s.isPublic);
-
     return NextResponse.json({
       success: true,
-      shares: filtered,
+      shares,
       r2Configured: isR2Configured(),
     });
   } catch (err: unknown) {

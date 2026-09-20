@@ -83,23 +83,30 @@ export default function AdminPage() {
   }, []);
 
   const validatePin = async (pinToTest: string) => {
+    if (!pinToTest || !pinToTest.trim()) {
+      setAuthError("Please enter your admin password.");
+      setIsAuthenticated(false);
+      return;
+    }
     setAuthError("");
     try {
       const res = await fetch("/api/share", {
-        headers: { "x-admin-key": pinToTest },
+        headers: { "x-admin-key": pinToTest.trim() },
       });
       const data = await res.json();
-      if (res.status === 401 || !data.success) {
+      if (!res.ok || res.status === 401 || !data.success) {
         setAuthError("Incorrect admin password.");
         setIsAuthenticated(false);
+        sessionStorage.removeItem("mir_admin_pin");
       } else {
         setIsAuthenticated(true);
-        sessionStorage.setItem("mir_admin_pin", pinToTest);
+        sessionStorage.setItem("mir_admin_pin", pinToTest.trim());
         setShares(data.shares || []);
         setR2Configured(Boolean(data.r2Configured));
       }
     } catch {
       setAuthError("Failed to connect to API server.");
+      setIsAuthenticated(false);
     }
   };
 
