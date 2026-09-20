@@ -6,7 +6,6 @@ import ShareHeader from "@/components/ShareHeader";
 import ShareFooter from "@/components/ShareFooter";
 import {
   KeyRound,
-  Plus,
   FileArchive,
   Code2,
   UploadCloud,
@@ -533,9 +532,14 @@ export default function AdminPage() {
 
             {/* Direct Upload (Cloudflare R2) */}
             <div className="p-5 rounded-2xl bg-[#050b16] border border-[#4d85b6]/40 space-y-4">
-              <div className="flex items-center gap-2 text-sm font-bold text-[#7aa6d0]">
-                <UploadCloud className="w-4 h-4" />
-                <span>Option B: Direct Upload via Free Cloudflare R2</span>
+              <div className="flex flex-wrap items-center justify-between gap-2 text-sm font-bold text-[#7aa6d0]">
+                <div className="flex items-center gap-2">
+                  <UploadCloud className="w-4 h-4" />
+                  <span>Option B: Direct Upload via Free Cloudflare R2</span>
+                </div>
+                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono border ${r2Configured ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30" : "bg-amber-500/15 text-amber-300 border-amber-500/30"}`}>
+                  {r2Configured ? "R2 Active" : "R2 Not Setup (Use Option A)"}
+                </span>
               </div>
               <p className="text-xs text-[#a6c5e4]">
                 Upload files up to 5GB directly from your browser with zero bandwidth costs (Requires Cloudflare R2 keys in Vercel).
