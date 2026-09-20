@@ -45,6 +45,7 @@ export default function AdminPage() {
   const [shares, setShares] = useState<ShareItem[]>([]);
   const [loadingShares, setLoadingShares] = useState(false);
   const [r2Configured, setR2Configured] = useState(false);
+  const [databaseConfigured, setDatabaseConfigured] = useState(false);
 
   // Form fields
   const [title, setTitle] = useState("");
@@ -103,6 +104,7 @@ export default function AdminPage() {
         sessionStorage.setItem("mir_admin_pin", pinToTest.trim());
         setShares(data.shares || []);
         setR2Configured(Boolean(data.r2Configured));
+        setDatabaseConfigured(Boolean(data.databaseConfigured));
       }
     } catch {
       setAuthError("Failed to connect to API server.");
@@ -120,6 +122,7 @@ export default function AdminPage() {
       if (data.success) {
         setShares(data.shares || []);
         setR2Configured(Boolean(data.r2Configured));
+        setDatabaseConfigured(Boolean(data.databaseConfigured));
       }
     } catch (err: unknown) {
       console.error("Error fetching shares:", err);
@@ -270,7 +273,11 @@ export default function AdminPage() {
       if (!data.success) {
         alert("Error: " + data.error);
       } else {
-        const fullUrl = `${window.location.origin}${data.shareUrl}`;
+        let fullUrl = `${window.location.origin}${data.shareUrl}`;
+        if (finalFileUrl && !databaseConfigured) {
+          fullUrl += `?f=${encodeURIComponent(finalFileUrl)}&t=${encodeURIComponent(title)}`;
+          if (finalFileSize) fullUrl += `&s=${encodeURIComponent(finalFileSize)}`;
+        }
         setSuccessShareUrl(fullUrl);
 
         // Reset form
@@ -383,7 +390,7 @@ export default function AdminPage() {
 
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 pt-8 pb-16">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8 pb-6 border-b border-[#4d85b6]/20">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 pb-6 border-b border-[#4d85b6]/20">
           <div>
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -406,6 +413,23 @@ export default function AdminPage() {
           </button>
         </div>
 
+        {/* Storage Mode Status Notice */}
+        <div className="mb-6 p-4 rounded-2xl bg-[#0a1428] border border-[#4d85b6]/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2.5">
+            <span className={`w-2.5 h-2.5 rounded-full ${databaseConfigured ? "bg-emerald-400 animate-pulse" : "bg-[#00b4d8]"}`} />
+            <span className="font-bold text-white">
+              {databaseConfigured
+                ? "Persistent Database Active (Cloudflare R2 / Vercel KV)"
+                : "Portable Link Engine Active (Zero Database Required)"}
+            </span>
+          </div>
+          <span className="text-[#a6c5e4]">
+            {databaseConfigured
+              ? "All created links are permanently stored and accessible via clean short URLs."
+              : "Links with attached files work 100% worldwide for all users! Connect Vercel KV or R2 anytime for clean short URLs."}
+          </span>
+        </div>
+
         {/* Success Banner */}
         {successShareUrl && (
           <div className="mb-8 p-6 rounded-3xl bg-gradient-to-r from-emerald-950/80 to-[#0a1428] border border-emerald-500/50 shadow-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -417,6 +441,12 @@ export default function AdminPage() {
               <p className="text-xs text-white mt-1 font-mono break-all font-semibold">
                 {successShareUrl}
               </p>
+              {!databaseConfigured && successShareUrl.includes("?") && (
+                <p className="text-[11px] text-[#48cae4] mt-1.5 font-sans flex items-center gap-1.5">
+                  <span>⚡</span>
+                  <span>This portable link works 100% worldwide for any visitor without a database. Ready to send!</span>
+                </p>
+              )}
             </div>
 
             <div className="flex items-center gap-2 shrink-0">

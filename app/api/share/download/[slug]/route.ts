@@ -28,8 +28,13 @@ export async function GET(
   try {
     const { slug } = await params;
     const share = await getShareBySlug(slug);
+    const queryFileUrl = request.nextUrl.searchParams.get("f");
 
     if (!share) {
+      if (queryFileUrl) {
+        const directUrl = normalizeDirectDownloadUrl(decodeURIComponent(queryFileUrl));
+        return NextResponse.redirect(directUrl);
+      }
       return NextResponse.json(
         { success: false, error: "Share not found." },
         { status: 404 }

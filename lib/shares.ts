@@ -210,6 +210,58 @@ function ensureDataFile(): void {
   }
 }
 
+export function isKVConfigured(): boolean {
+  const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+  return Boolean(url && token);
+}
+
+export function isDatabaseConfigured(): boolean {
+  return isR2Configured() || isKVConfigured();
+}
+
+async function loadSharesFromKV(): Promise<ShareItem[] | null> {
+  const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!url || !token) return null;
+
+  try {
+    const res = await fetch(`${url}/get/mirlabs_shares`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data && data.result) {
+      return typeof data.result === "string" ? JSON.parse(data.result) : data.result;
+    }
+  } catch (err) {
+    console.warn("Could not load shares from KV:", err);
+  }
+  return null;
+}
+
+async function saveSharesToKV(shares: ShareItem[]): Promise<boolean> {
+  const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!url || !token) return false;
+
+  try {
+    const res = await fetch(`${url}/set/mirlabs_shares`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(shares),
+    });
+    return res.ok;
+  } catch (err) {
+    console.error("Could not save shares to KV:", err);
+    return false;
+  }
+}
+
 export function getAllSharesSync(): ShareItem[] {
   if (inMemoryShares && inMemoryShares.length > 0) {
     return inMemoryShares;
@@ -236,7 +288,27 @@ export function getAllSharesSync(): ShareItem[] {
 }
 
 export async function getAllShares(): Promise<ShareItem[]> {
-  // 1. Try Cloudflare R2 if configured
+  // 1. Try Vercel KV / Upstash Redis if configured
+  if (isKVConfigured()) {
+    try {
+      const kvShares = await loadSharesFromKV();
+      if (kvShares && Array.isArray(kvShares) && kvShares.length > 0) {
+        const kvSlugs = new Set(kvShares.map((s) => s.slug));
+        const merged = [...kvShares];
+        for (const init of INITIAL_SHARES) {
+          if (!kvSlugs.has(init.slug)) {
+            merged.push(init);
+          }
+        }
+        inMemoryShares = merged;
+        return inMemoryShares;
+      }
+    } catch (err) {
+      console.warn("Could not read shares from KV:", err);
+    }
+  }
+
+  // 2. Try Cloudflare R2 if configured
   if (isR2Configured()) {
     try {
       const r2Shares = await loadSharesFromR2();
@@ -257,12 +329,12 @@ export async function getAllShares(): Promise<ShareItem[]> {
     }
   }
 
-  // 2. Return cached in-memory if available
+  // 3. Return cached in-memory if available
   if (inMemoryShares && inMemoryShares.length > 0) {
     return inMemoryShares;
   }
 
-  // 3. Fall back to local file / /tmp / initial
+  // 4. Fall back to local file / /tmp / initial
   return getAllSharesSync();
 }
 
@@ -294,7 +366,16 @@ export async function saveAllShares(shares: ShareItem[]): Promise<boolean> {
     }
   }
 
-  // 2. Save to Cloudflare R2 if configured
+  // 2. Save to Vercel KV / Upstash Redis if configured
+  if (isKVConfigured()) {
+    try {
+      await saveSharesToKV(shares);
+    } catch (err) {
+      console.error("Failed to save shares to KV:", err);
+    }
+  }
+
+  // 3. Save to Cloudflare R2 if configured
   if (isR2Configured()) {
     try {
       await saveSharesToR2(shares);

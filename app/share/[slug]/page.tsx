@@ -21,11 +21,20 @@ import CopyShareLinkButton from "@/components/CopyShareLinkButton";
 
 interface Props {
   params: Promise<{ slug: string }>;
+  searchParams?: Promise<{ d?: string; f?: string; t?: string; s?: string; desc?: string }>;
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const { slug } = await params;
+  const query = searchParams ? await searchParams : {};
   const share = await getShareBySlug(slug);
+
+  if (!share && query.t) {
+    return {
+      title: `${decodeURIComponent(query.t)} — MIR Labs Code Download`,
+      description: "Download and explore source code shared by MIR Labs.",
+    };
+  }
 
   if (!share) {
     return {
@@ -57,9 +66,57 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function ShareDetailPage({ params }: Props) {
+export default async function ShareDetailPage({ params, searchParams }: Props) {
   const { slug } = await params;
-  const share = await getShareBySlug(slug);
+  const query = searchParams ? await searchParams : {};
+  let share = await getShareBySlug(slug);
+
+  // If not found in database, check portable URL parameters
+  if (!share && (query.f || query.d)) {
+    if (query.d) {
+      try {
+        const decoded = JSON.parse(Buffer.from(query.d, "base64url").toString("utf-8"));
+        share = {
+          id: `portable_${slug}`,
+          slug: slug,
+          title: decoded.title || slug.replace(/-/g, " "),
+          description: decoded.description || "",
+          fileUrl: decoded.fileUrl || "",
+          fileName: decoded.fileName || `${slug}.zip`,
+          fileSize: decoded.fileSize || "External Archive",
+          codeSnippet: decoded.codeSnippet || "",
+          language: decoded.language || "typescript",
+          tags: decoded.tags || [],
+          views: 1,
+          downloads: 0,
+          createdAt: decoded.createdAt || new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          isPublic: true,
+          authorName: decoded.authorName || "MIR Labs",
+          authorInstagram: "https://www.instagram.com/mir.labs/",
+        };
+      } catch (err) {
+        console.warn("Error decoding portable share payload:", err);
+      }
+    } else if (query.f) {
+      share = {
+        id: `portable_${slug}`,
+        slug: slug,
+        title: query.t ? decodeURIComponent(query.t) : slug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+        description: query.desc ? decodeURIComponent(query.desc) : "Direct download package shared by MIR Labs.",
+        fileUrl: decodeURIComponent(query.f),
+        fileName: `${slug}.zip`,
+        fileSize: query.s ? decodeURIComponent(query.s) : "External Cloud Archive",
+        views: 1,
+        downloads: 0,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        isPublic: true,
+        authorName: "MIR Labs",
+        authorInstagram: "https://www.instagram.com/mir.labs/",
+      };
+    }
+  }
 
   // If share not found, render a friendly high-contrast fallback instead of an empty screen
   if (!share) {
@@ -243,7 +300,7 @@ export default async function ShareDetailPage({ params }: Props) {
             <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto shrink-0">
               {/* PRIMARY DOWNLOAD BUTTON */}
               <a
-                href={`/api/share/download/${share.slug}`}
+                href={`/api/share/download/${share.slug}${share.fileUrl ? `?f=${encodeURIComponent(share.fileUrl)}` : ""}`}
                 download
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-8 py-4 rounded-xl text-base font-extrabold bg-gradient-to-r from-[#00b4d8] via-[#0096c7] to-[#0077b6] text-white hover:from-[#48cae4] hover:to-[#0096c7] shadow-xl shadow-[#00b4d8]/30 transition-all transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer shrink-0"
               >

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAllShares, createShare } from "@/lib/shares";
+import { getAllShares, createShare, isDatabaseConfigured } from "@/lib/shares";
 import { isR2Configured } from "@/lib/r2";
 
 // Verify admin pin if provided
@@ -24,6 +24,7 @@ export async function GET(request: NextRequest) {
       success: true,
       shares,
       r2Configured: isR2Configured(),
+      databaseConfigured: isDatabaseConfigured(),
     });
   } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : "Failed to fetch shares";
