@@ -32,6 +32,7 @@ import {
   ExternalLink,
   Shield,
   Briefcase,
+  Code,
 } from "lucide-react";
 
 const EMAIL = "mirlabs11@gmail.com";
@@ -303,6 +304,12 @@ export default function Home() {
           </div>
           <div className="flex items-center gap-2 pointer-events-auto">
             <SeasonPicker />
+            <span className="hidden sm:inline-flex">
+              <a href="/share" data-cursor="hover" className="frost-btn !py-1.5 !px-3 !text-xs flex items-center gap-1.5">
+                <Code className="w-3.5 h-3.5 text-ice-400" />
+                <span>Code Vault</span>
+              </a>
+            </span>
             <span className="hidden md:inline-flex">
               <a href={GITHUB} target="_blank" rel="noopener noreferrer" data-cursor="hover" className="frost-btn !py-1.5 !px-3 !text-xs">
                 <GithubIcon />
@@ -628,6 +635,10 @@ export default function Home() {
                   <a href={WHATSAPP} target="_blank" rel="noopener noreferrer" data-cursor="hover" className="frost-btn !py-2 !px-3.5 !text-xs flex items-center gap-1.5">
                     <WhatsappIcon />
                     <span>WhatsApp</span>
+                  </a>
+                  <a href="/share" data-cursor="hover" className="frost-btn !py-2 !px-3.5 !text-xs flex items-center gap-1.5">
+                    <Code className="w-3.5 h-3.5 text-ice-400" />
+                    <span>Code Vault</span>
                   </a>
                   <a href={GITHUB} target="_blank" rel="noopener noreferrer" data-cursor="hover" className="frost-btn !py-2 !px-3.5 !text-xs flex items-center gap-1.5">
                     <GithubIcon />

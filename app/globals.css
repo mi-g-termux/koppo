@@ -719,3 +719,78 @@ body {
   opacity: 1;
   transform: translate(-50%, 0);
 }
+
+/* ─── Prism Syntax Highlighting (Cyberpunk Ice Dark Theme) ─────────────── */
+
+code[class*="language-"],
+pre[class*="language-"] {
+  color: #eaf2fb;
+  text-shadow: none;
+  font-family: var(--font-geist-mono), Consolas, Monaco, "Andale Mono", monospace;
+  direction: ltr;
+  text-align: left;
+  white-space: pre;
+  word-spacing: normal;
+  word-break: normal;
+  line-height: 1.6;
+  tab-size: 2;
+  hyphens: none;
+}
+
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+  color: #5c7599;
+  font-style: italic;
+}
+
+.token.punctuation {
+  color: #9ab5d4;
+}
+
+.token.property,
+.token.tag,
+.token.boolean,
+.token.number,
+.token.constant,
+.token.symbol,
+.token.deleted {
+  color: #f694ff;
+}
+
+.token.selector,
+.token.attr-name,
+.token.string,
+.token.char,
+.token.builtin,
+.token.inserted {
+  color: #5eead4;
+}
+
+.token.operator,
+.token.entity,
+.token.url,
+.language-css .token.string,
+.style .token.string {
+  color: #a5b4fc;
+}
+
+.token.atrule,
+.token.attr-value,
+.token.keyword {
+  color: #38bdf8;
+  font-weight: 500;
+}
+
+.token.function,
+.token.class-name {
+  color: #facc15;
+}
+
+.token.regex,
+.token.important,
+.token.variable {
+  color: #fb923c;
+}
+
