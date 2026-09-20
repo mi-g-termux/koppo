@@ -186,7 +186,7 @@ export function saveAllShares(shares: ShareItem[]): boolean {
     const targetPath = getActiveFilePath();
     fs.writeFileSync(targetPath, JSON.stringify(shares, null, 2), "utf8");
     return true;
-  } catch (err) {
+  } catch {
     // Fallback to /tmp if primary path is read-only
     try {
       fs.writeFileSync(TMP_SHARES_FILE, JSON.stringify(shares, null, 2), "utf8");
