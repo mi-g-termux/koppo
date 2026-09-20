@@ -166,6 +166,7 @@ export default function AdminPage() {
       setAdminPin(savedPin);
       validatePin(savedPin);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const validatePin = async (pinToTest: string) => {
