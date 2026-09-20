@@ -39,10 +39,10 @@ export default function CopyShareLinkButton({ slug, title }: CopyShareLinkButton
   return (
     <button
       onClick={handleShare}
-      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+      className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${
         copied
           ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
-          : "bg-ink-1/90 text-ice-200 hover:text-white hover:bg-ice-500/20 border border-ice-500/30"
+          : "bg-[#0a1428] text-[#cfe0f2] hover:text-white hover:bg-[#132742] border border-[#4d85b6]/40"
       }`}
     >
       {copied ? (

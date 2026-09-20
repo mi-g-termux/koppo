@@ -1,4 +1,9 @@
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import {
+  S3Client,
+  PutObjectCommand,
+  GetObjectCommand,
+  DeleteObjectCommand,
+} from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 export interface R2Config {
@@ -116,3 +121,58 @@ export async function deleteR2File(key: string) {
     return false;
   }
 }
+
+/**
+ * Load persistent shares database JSON from Cloudflare R2
+ */
+export async function loadSharesFromR2(): Promise<unknown[] | null> {
+  if (!isR2Configured()) return null;
+  try {
+    const config = getR2Config();
+    const client = getR2Client();
+    const command = new GetObjectCommand({
+      Bucket: config.bucketName,
+      Key: "_system/shares.json",
+    });
+
+    const response = await client.send(command);
+    if (!response.Body) return null;
+    const bodyString = await response.Body.transformToString();
+    const parsed = JSON.parse(bodyString);
+    if (Array.isArray(parsed)) {
+      return parsed;
+    }
+    return null;
+  } catch (err: unknown) {
+    const s3Error = err as { name?: string; $metadata?: { httpStatusCode?: number } };
+    if (s3Error.name === "NoSuchKey" || s3Error.$metadata?.httpStatusCode === 404) {
+      return null;
+    }
+    console.warn("Could not load shares from Cloudflare R2:", err);
+    return null;
+  }
+}
+
+/**
+ * Save persistent shares database JSON into Cloudflare R2
+ */
+export async function saveSharesToR2(shares: unknown[]): Promise<boolean> {
+  if (!isR2Configured()) return false;
+  try {
+    const config = getR2Config();
+    const client = getR2Client();
+    const command = new PutObjectCommand({
+      Bucket: config.bucketName,
+      Key: "_system/shares.json",
+      Body: JSON.stringify(shares, null, 2),
+      ContentType: "application/json",
+    });
+
+    await client.send(command);
+    return true;
+  } catch (err) {
+    console.error("Failed to save shares to Cloudflare R2:", err);
+    return false;
+  }
+}
+

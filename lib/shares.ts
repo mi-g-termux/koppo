@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { isR2Configured, loadSharesFromR2, saveSharesToR2 } from "@/lib/r2";
 
 export interface CodeSnippet {
   title?: string;
@@ -34,6 +35,66 @@ const SHARES_FILE = path.join(DATA_DIR, "shares.json");
 
 const INITIAL_SHARES: ShareItem[] = [
   {
+    id: "share_fly_to_cart",
+    slug: "fly-to-cart",
+    title: "Fly-to-Cart Interactive Animation & Source Code",
+    description:
+      "Full source code for the high-conversion Fly-to-Cart e-commerce micro-interaction with parabolic bezier curve animation, particle burst, and responsive mobile support.",
+    language: "tsx",
+    codeSnippet: `// Fly-to-Cart Micro-Interaction Hook & Component
+import React, { useState, useRef } from "react";
+
+export interface FlyItem {
+  id: string;
+  startX: number;
+  startY: number;
+  targetX: number;
+  targetY: number;
+  image: string;
+}
+
+export function useFlyToCart() {
+  const [flyingItems, setFlyingItems] = useState<FlyItem[]>([]);
+
+  const triggerFly = (
+    sourceEl: HTMLElement,
+    targetEl: HTMLElement,
+    imageUrl: string
+  ) => {
+    const sourceRect = sourceEl.getBoundingClientRect();
+    const targetRect = targetEl.getBoundingClientRect();
+
+    const newItem: FlyItem = {
+      id: Math.random().toString(36).substring(7),
+      startX: sourceRect.left + sourceRect.width / 2,
+      startY: sourceRect.top + sourceRect.height / 2,
+      targetX: targetRect.left + targetRect.width / 2,
+      targetY: targetRect.top + targetRect.height / 2,
+      image: imageUrl,
+    };
+
+    setFlyingItems((prev) => [...prev, newItem]);
+
+    setTimeout(() => {
+      setFlyingItems((prev) => prev.filter((item) => item.id !== newItem.id));
+    }, 900);
+  };
+
+  return { flyingItems, triggerFly };
+}`,
+    fileUrl: "",
+    fileName: "fly-to-cart-source.zip",
+    fileSize: "8.4 MB",
+    tags: ["React", "Animation", "Next.js", "TailwindCSS", "E-Commerce"],
+    views: 64,
+    downloads: 29,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    isPublic: true,
+    authorName: "MIR Labs",
+    authorInstagram: "https://www.instagram.com/mir.labs/",
+  },
+  {
     id: "share_threejs_keyboard",
     slug: "threejs-keyboard-3d",
     title: "Three.js 3D Interactive Frozen Keyboard Component",
@@ -55,7 +116,6 @@ export function Keyboard3DShowcase() {
         <pointLight position={[-5, 5, -5]} color="#4d85b6" intensity={2} />
         <Suspense fallback={null}>
           <Float speed={1.5} rotationIntensity={0.2} floatIntensity={0.5}>
-            {/* 3D Keyboard Scene Geometry */}
             <mesh rotation={[-Math.PI / 8, 0, 0]}>
               <boxGeometry args={[6.2, 0.4, 2.8]} />
               <meshStandardMaterial
@@ -125,7 +185,6 @@ let inMemoryShares: ShareItem[] | null = null;
 const TMP_SHARES_FILE = "/tmp/shares.json";
 
 function getActiveFilePath(): string {
-  // If running on Vercel or read-only filesystem
   if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
     return TMP_SHARES_FILE;
   }
@@ -141,25 +200,28 @@ function ensureDataFile(): void {
       fs.writeFileSync(SHARES_FILE, JSON.stringify(INITIAL_SHARES, null, 2), "utf8");
     }
   } catch {
-    // Read-only filesystem on Vercel, fallback to /tmp
     try {
       if (!fs.existsSync(TMP_SHARES_FILE)) {
         fs.writeFileSync(TMP_SHARES_FILE, JSON.stringify(INITIAL_SHARES, null, 2), "utf8");
       }
     } catch {
-      // In-memory will handle it
+      // In-memory fallback
     }
   }
 }
 
-export function getAllShares(): ShareItem[] {
+export function getAllSharesSync(): ShareItem[] {
   if (inMemoryShares && inMemoryShares.length > 0) {
     return inMemoryShares;
   }
 
   try {
     ensureDataFile();
-    const filePath = fs.existsSync(SHARES_FILE) ? SHARES_FILE : (fs.existsSync(TMP_SHARES_FILE) ? TMP_SHARES_FILE : null);
+    const filePath = fs.existsSync(SHARES_FILE)
+      ? SHARES_FILE
+      : fs.existsSync(TMP_SHARES_FILE)
+      ? TMP_SHARES_FILE
+      : null;
     if (filePath) {
       const data = fs.readFileSync(filePath, "utf8");
       inMemoryShares = JSON.parse(data) as ShareItem[];
@@ -173,39 +235,85 @@ export function getAllShares(): ShareItem[] {
   return inMemoryShares;
 }
 
-export function getShareBySlug(slug: string): ShareItem | null {
-  const shares = getAllShares();
+export async function getAllShares(): Promise<ShareItem[]> {
+  // 1. Try Cloudflare R2 if configured
+  if (isR2Configured()) {
+    try {
+      const r2Shares = await loadSharesFromR2();
+      if (r2Shares && Array.isArray(r2Shares) && r2Shares.length > 0) {
+        // Merge with initial shares so defaults always exist
+        const r2Slugs = new Set((r2Shares as ShareItem[]).map((s) => s.slug));
+        const merged = [...(r2Shares as ShareItem[])];
+        for (const init of INITIAL_SHARES) {
+          if (!r2Slugs.has(init.slug)) {
+            merged.push(init);
+          }
+        }
+        inMemoryShares = merged;
+        return inMemoryShares;
+      }
+    } catch (err) {
+      console.warn("Could not read shares from R2, falling back to local:", err);
+    }
+  }
+
+  // 2. Return cached in-memory if available
+  if (inMemoryShares && inMemoryShares.length > 0) {
+    return inMemoryShares;
+  }
+
+  // 3. Fall back to local file / /tmp / initial
+  return getAllSharesSync();
+}
+
+export async function getShareBySlug(slug: string): Promise<ShareItem | null> {
+  const shares = await getAllShares();
   const cleanSlug = slug.toLowerCase().trim();
   return shares.find((s) => s.slug.toLowerCase() === cleanSlug || s.id === slug) || null;
 }
 
-export function saveAllShares(shares: ShareItem[]): boolean {
+export function getShareBySlugSync(slug: string): ShareItem | null {
+  const shares = getAllSharesSync();
+  const cleanSlug = slug.toLowerCase().trim();
+  return shares.find((s) => s.slug.toLowerCase() === cleanSlug || s.id === slug) || null;
+}
+
+export async function saveAllShares(shares: ShareItem[]): Promise<boolean> {
   inMemoryShares = shares;
+
+  // 1. Save to local disk / /tmp
   try {
     ensureDataFile();
     const targetPath = getActiveFilePath();
     fs.writeFileSync(targetPath, JSON.stringify(shares, null, 2), "utf8");
-    return true;
   } catch {
-    // Fallback to /tmp if primary path is read-only
     try {
       fs.writeFileSync(TMP_SHARES_FILE, JSON.stringify(shares, null, 2), "utf8");
-      return true;
     } catch {
-      console.warn("Could not persist to disk, kept in memory cache.");
-      return true;
+      // Memory fallback
     }
   }
+
+  // 2. Save to Cloudflare R2 if configured
+  if (isR2Configured()) {
+    try {
+      await saveSharesToR2(shares);
+    } catch (err) {
+      console.error("Failed to save shares to R2:", err);
+    }
+  }
+
+  return true;
 }
 
-export function createShare(
+export async function createShare(
   item: Omit<ShareItem, "id" | "views" | "downloads" | "createdAt" | "updatedAt"> & {
     id?: string;
   }
-): ShareItem {
-  const shares = getAllShares();
+): Promise<ShareItem> {
+  const shares = await getAllShares();
 
-  // Create unique slug if not provided or duplicate
+  // Create clean slug
   let slug = (item.slug || item.title)
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
@@ -215,19 +323,29 @@ export function createShare(
     slug = `share-${Date.now()}`;
   }
 
-  // Ensure uniqueness
-  let finalSlug = slug;
-  let counter = 1;
-  while (shares.some((s) => s.slug === finalSlug)) {
-    finalSlug = `${slug}-${counter}`;
-    counter++;
+  // If this slug already exists, UPDATE the existing share instead of creating a duplicate
+  const existingIndex = shares.findIndex((s) => s.slug === slug);
+  const now = new Date().toISOString();
+
+  if (existingIndex !== -1) {
+    const updatedShare: ShareItem = {
+      ...shares[existingIndex],
+      ...item,
+      title: item.title.trim(),
+      slug: slug,
+      updatedAt: now,
+      authorName: item.authorName || shares[existingIndex].authorName || "MIR Labs",
+      authorInstagram: item.authorInstagram || shares[existingIndex].authorInstagram || "https://www.instagram.com/mir.labs/",
+    };
+    shares[existingIndex] = updatedShare;
+    await saveAllShares(shares);
+    return updatedShare;
   }
 
-  const now = new Date().toISOString();
   const newShare: ShareItem = {
     ...item,
     id: item.id || `share_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-    slug: finalSlug,
+    slug: slug,
     title: item.title.trim(),
     views: 0,
     downloads: 0,
@@ -235,16 +353,16 @@ export function createShare(
     updatedAt: now,
     isPublic: item.isPublic !== undefined ? item.isPublic : true,
     authorName: item.authorName || "MIR Labs",
-    authorInstagram: item.authorInstagram || "https://instagram.com",
+    authorInstagram: item.authorInstagram || "https://www.instagram.com/mir.labs/",
   };
 
   shares.unshift(newShare);
-  saveAllShares(shares);
+  await saveAllShares(shares);
   return newShare;
 }
 
-export function updateShare(slug: string, updates: Partial<ShareItem>): ShareItem | null {
-  const shares = getAllShares();
+export async function updateShare(slug: string, updates: Partial<ShareItem>): Promise<ShareItem | null> {
+  const shares = await getAllShares();
   const index = shares.findIndex((s) => s.slug === slug || s.id === slug);
   if (index === -1) return null;
 
@@ -255,33 +373,34 @@ export function updateShare(slug: string, updates: Partial<ShareItem>): ShareIte
   };
 
   shares[index] = updated;
-  saveAllShares(shares);
+  await saveAllShares(shares);
   return updated;
 }
 
-export function deleteShare(slug: string): boolean {
-  const shares = getAllShares();
+export async function deleteShare(slug: string): Promise<boolean> {
+  const shares = await getAllShares();
   const filtered = shares.filter((s) => s.slug !== slug && s.id !== slug);
   if (filtered.length === shares.length) return false;
-  return saveAllShares(filtered);
+  return await saveAllShares(filtered);
 }
 
-export function incrementShareViews(slug: string): ShareItem | null {
-  const shares = getAllShares();
+export async function incrementShareViews(slug: string): Promise<ShareItem | null> {
+  const shares = await getAllShares();
   const index = shares.findIndex((s) => s.slug === slug || s.id === slug);
   if (index === -1) return null;
 
   shares[index].views = (shares[index].views || 0) + 1;
-  saveAllShares(shares);
+  await saveAllShares(shares);
   return shares[index];
 }
 
-export function incrementShareDownloads(slug: string): ShareItem | null {
-  const shares = getAllShares();
+export async function incrementShareDownloads(slug: string): Promise<ShareItem | null> {
+  const shares = await getAllShares();
   const index = shares.findIndex((s) => s.slug === slug || s.id === slug);
   if (index === -1) return null;
 
   shares[index].downloads = (shares[index].downloads || 0) + 1;
-  saveAllShares(shares);
+  await saveAllShares(shares);
   return shares[index];
 }
+

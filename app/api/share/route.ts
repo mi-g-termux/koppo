@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const shares = getAllShares();
+    const shares = await getAllShares();
     return NextResponse.json({
       success: true,
       shares,
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const newShare = createShare({
+    const newShare = await createShare({
       title: body.title,
       slug: body.slug,
       description: body.description || "",

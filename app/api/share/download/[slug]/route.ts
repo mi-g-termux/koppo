@@ -27,7 +27,7 @@ export async function GET(
 ) {
   try {
     const { slug } = await params;
-    const share = getShareBySlug(slug);
+    const share = await getShareBySlug(slug);
 
     if (!share) {
       return NextResponse.json(
@@ -38,7 +38,7 @@ export async function GET(
 
     if (!share.fileUrl) {
       if (share.codeSnippet) {
-        incrementShareDownloads(slug);
+        await incrementShareDownloads(slug);
         const ext = share.language === "tsx" ? "tsx" : share.language === "python" ? "py" : share.language === "jsx" ? "jsx" : share.language === "html" ? "html" : "ts";
         const downloadName = share.fileName ? (share.fileName.endsWith(".zip") ? share.fileName.replace(/\.zip$/, `.${ext}`) : share.fileName) : `${share.slug}.${ext}`;
         return new NextResponse(share.codeSnippet, {
@@ -56,7 +56,7 @@ export async function GET(
     }
 
     // Increment download metric
-    incrementShareDownloads(slug);
+    await incrementShareDownloads(slug);
 
     const directDownloadUrl = normalizeDirectDownloadUrl(share.fileUrl);
 

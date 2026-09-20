@@ -14,7 +14,7 @@ export async function GET(
 ) {
   try {
     const { slug } = await params;
-    const share = getShareBySlug(slug);
+    const share = await getShareBySlug(slug);
 
     if (!share) {
       return NextResponse.json(
@@ -26,7 +26,7 @@ export async function GET(
     // Check query param or header to avoid counting admin preview as visitor view
     const noTrack = request.nextUrl.searchParams.get("notrack") === "1";
     if (!noTrack) {
-      incrementShareViews(slug);
+      await incrementShareViews(slug);
     }
 
     return NextResponse.json({
@@ -58,7 +58,7 @@ export async function DELETE(
       );
     }
 
-    const share = getShareBySlug(slug);
+    const share = await getShareBySlug(slug);
     if (!share) {
       return NextResponse.json(
         { success: false, error: "Share not found." },
@@ -71,7 +71,7 @@ export async function DELETE(
       await deleteR2File(share.fileKey);
     }
 
-    const deleted = deleteShare(slug);
+    const deleted = await deleteShare(slug);
 
     return NextResponse.json({
       success: deleted,

@@ -13,30 +13,30 @@ function InstagramIcon({ className }: { className?: string }) {
 
 export default function ShareFooter() {
   return (
-    <footer className="mt-16 w-full border-t border-ice-500/15 bg-ink-0/60 backdrop-blur-md pt-12 pb-16">
+    <footer className="mt-16 w-full border-t border-[#4d85b6]/25 bg-[#060e1c]/90 backdrop-blur-md pt-12 pb-16">
       <div className="max-w-5xl mx-auto px-4 sm:px-6">
         {/* Call to Action Box */}
-        <div className="relative rounded-3xl p-8 sm:p-10 bg-gradient-to-b from-ink-1/80 to-ink-0 border border-ice-500/25 shadow-2xl overflow-hidden text-center">
+        <div className="relative rounded-3xl p-8 sm:p-10 bg-gradient-to-b from-[#0a1428] to-[#060e1c] border border-[#4d85b6]/35 shadow-2xl overflow-hidden text-center">
           {/* Subtle Background Glow */}
-          <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-96 bg-ice-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-96 bg-[#00b4d8]/10 rounded-full blur-3xl pointer-events-none" />
 
           <div className="relative z-10 max-w-2xl mx-auto flex flex-col items-center">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-ice-500/15 border border-ice-400/30 text-xs font-semibold text-ice-300 mb-4">
-              <Sparkles className="w-3.5 h-3.5 text-ice-400" />
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#00b4d8]/15 border border-[#00b4d8]/30 text-xs font-semibold text-[#48cae4] mb-4">
+              <Sparkles className="w-3.5 h-3.5 text-[#00b4d8]" />
               <span>Created by MIR Labs</span>
             </div>
 
             <h3 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
               Looking for High-Performance 3D & Web Apps?
             </h3>
-            <p className="mt-3 text-sm sm:text-base text-ice-300/80 leading-relaxed">
+            <p className="mt-3 text-sm sm:text-base text-[#a6c5e4] leading-relaxed">
               I build interactive 3D experiences, production SaaS platforms, and responsive full-stack applications. Let’s bring your next big idea to life.
             </p>
 
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
               <Link
                 href="/"
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-ice-400 text-ink-0 hover:bg-ice-300 hover:shadow-lg hover:shadow-ice-400/25 transition-all cursor-pointer font-sans"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-[#00b4d8] text-[#060e1c] hover:bg-[#48cae4] hover:shadow-lg hover:shadow-[#00b4d8]/25 transition-all cursor-pointer font-sans"
               >
                 <span>Explore Full 3D Portfolio</span>
                 <ArrowRight className="w-4 h-4" />
@@ -44,9 +44,9 @@ export default function ShareFooter() {
 
               <Link
                 href="/#contact"
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-ink-1/90 text-ice-100 hover:bg-ice-500/20 border border-ice-500/30 hover:border-ice-400/50 transition-all cursor-pointer"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-[#0a1428] text-white hover:bg-[#132742] border border-[#4d85b6]/40 transition-all cursor-pointer"
               >
-                <Mail className="w-4 h-4 text-ice-400" />
+                <Mail className="w-4 h-4 text-[#7aa6d0]" />
                 <span>Contact / Hire Me</span>
               </Link>
 
@@ -54,9 +54,9 @@ export default function ShareFooter() {
                 href="https://www.instagram.com/mir.labs/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-ice-300 hover:text-white bg-ink-1/40 hover:bg-ice-500/15 border border-ice-500/20 transition-all cursor-pointer"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-[#cfe0f2] hover:text-white bg-[#0a1428] hover:bg-[#132742] border border-[#4d85b6]/30 transition-all cursor-pointer"
               >
-                <InstagramIcon className="w-4 h-4 text-ice-400" />
+                <InstagramIcon className="w-4 h-4 text-[#7aa6d0]" />
                 <span>Instagram</span>
               </Link>
             </div>
@@ -64,14 +64,14 @@ export default function ShareFooter() {
         </div>
 
         {/* Copyright */}
-        <div className="mt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-ice-400/60 gap-4">
+        <div className="mt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-[#7aa6d0]/70 gap-4">
           <p>© {new Date().getFullYear()} MIR Labs. All rights reserved.</p>
           <div className="flex items-center gap-4">
-            <Link href="/" className="hover:text-ice-200 transition-colors">
+            <Link href="/" className="hover:text-white transition-colors">
               Portfolio
             </Link>
             <span>•</span>
-            <Link href="https://www.instagram.com/mir.labs/" target="_blank" rel="noopener noreferrer" className="hover:text-ice-200 transition-colors">
+            <Link href="https://www.instagram.com/mir.labs/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
               Instagram
             </Link>
           </div>
