@@ -94,7 +94,7 @@ export default function ShareAdminPage() {
       });
       const data = await res.json();
       if (res.status === 401 || !data.success) {
-        setAuthError("Incorrect Admin PIN. Please check your .env ADMIN_SECRET_KEY.");
+        setAuthError("Incorrect password.");
         setIsAuthenticated(false);
       } else {
         setIsAuthenticated(true);
@@ -349,7 +349,7 @@ export default function ShareAdminPage() {
                   type="password"
                   value={adminPin}
                   onChange={(e) => setAdminPin(e.target.value)}
-                  placeholder="Enter Admin PIN (Default: mirlabs2026)"
+                  placeholder="Enter your secret admin password"
                   className="w-full px-4 py-3 rounded-xl bg-ink-0 border border-ice-500/30 text-center font-mono text-sm text-ice-100 placeholder:text-ice-400/40 focus:outline-none focus:border-ice-300 transition-colors"
                   autoFocus
                 />

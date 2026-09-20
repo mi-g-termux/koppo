@@ -121,24 +121,56 @@ export function getInitialTheme(): ThemeSeason {
   },
 ];
 
-function ensureDataFile(): void {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
+let inMemoryShares: ShareItem[] | null = null;
+const TMP_SHARES_FILE = "/tmp/shares.json";
+
+function getActiveFilePath(): string {
+  // If running on Vercel or read-only filesystem
+  if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+    return TMP_SHARES_FILE;
   }
-  if (!fs.existsSync(SHARES_FILE)) {
-    fs.writeFileSync(SHARES_FILE, JSON.stringify(INITIAL_SHARES, null, 2), "utf8");
+  return SHARES_FILE;
+}
+
+function ensureDataFile(): void {
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    if (!fs.existsSync(SHARES_FILE)) {
+      fs.writeFileSync(SHARES_FILE, JSON.stringify(INITIAL_SHARES, null, 2), "utf8");
+    }
+  } catch {
+    // Read-only filesystem on Vercel, fallback to /tmp
+    try {
+      if (!fs.existsSync(TMP_SHARES_FILE)) {
+        fs.writeFileSync(TMP_SHARES_FILE, JSON.stringify(INITIAL_SHARES, null, 2), "utf8");
+      }
+    } catch {
+      // In-memory will handle it
+    }
   }
 }
 
 export function getAllShares(): ShareItem[] {
+  if (inMemoryShares && inMemoryShares.length > 0) {
+    return inMemoryShares;
+  }
+
   try {
     ensureDataFile();
-    const data = fs.readFileSync(SHARES_FILE, "utf8");
-    return JSON.parse(data) as ShareItem[];
+    const filePath = fs.existsSync(SHARES_FILE) ? SHARES_FILE : (fs.existsSync(TMP_SHARES_FILE) ? TMP_SHARES_FILE : null);
+    if (filePath) {
+      const data = fs.readFileSync(filePath, "utf8");
+      inMemoryShares = JSON.parse(data) as ShareItem[];
+      return inMemoryShares;
+    }
   } catch (err) {
     console.error("Error reading shares store:", err);
-    return INITIAL_SHARES;
   }
+
+  inMemoryShares = [...INITIAL_SHARES];
+  return inMemoryShares;
 }
 
 export function getShareBySlug(slug: string): ShareItem | null {
@@ -148,13 +180,21 @@ export function getShareBySlug(slug: string): ShareItem | null {
 }
 
 export function saveAllShares(shares: ShareItem[]): boolean {
+  inMemoryShares = shares;
   try {
     ensureDataFile();
-    fs.writeFileSync(SHARES_FILE, JSON.stringify(shares, null, 2), "utf8");
+    const targetPath = getActiveFilePath();
+    fs.writeFileSync(targetPath, JSON.stringify(shares, null, 2), "utf8");
     return true;
   } catch (err) {
-    console.error("Error writing shares store:", err);
-    return false;
+    // Fallback to /tmp if primary path is read-only
+    try {
+      fs.writeFileSync(TMP_SHARES_FILE, JSON.stringify(shares, null, 2), "utf8");
+      return true;
+    } catch {
+      console.warn("Could not persist to disk, kept in memory cache.");
+      return true;
+    }
   }
 }
 

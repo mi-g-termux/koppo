@@ -37,8 +37,20 @@ export async function GET(
     }
 
     if (!share.fileUrl) {
+      if (share.codeSnippet) {
+        incrementShareDownloads(slug);
+        const ext = share.language === "tsx" ? "tsx" : share.language === "python" ? "py" : share.language === "jsx" ? "jsx" : share.language === "html" ? "html" : "ts";
+        const downloadName = share.fileName ? (share.fileName.endsWith(".zip") ? share.fileName.replace(/\.zip$/, `.${ext}`) : share.fileName) : `${share.slug}.${ext}`;
+        return new NextResponse(share.codeSnippet, {
+          headers: {
+            "Content-Type": "text/plain; charset=utf-8",
+            "Content-Disposition": `attachment; filename="${downloadName}"`,
+          },
+        });
+      }
+
       return NextResponse.json(
-        { success: false, error: "No downloadable file attached to this share." },
+        { success: false, error: "No downloadable file or code attached to this share." },
         { status: 400 }
       );
     }
