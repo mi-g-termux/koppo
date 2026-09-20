@@ -33,153 +33,7 @@ export interface ShareItem {
 const DATA_DIR = path.join(process.cwd(), "data");
 const SHARES_FILE = path.join(DATA_DIR, "shares.json");
 
-const INITIAL_SHARES: ShareItem[] = [
-  {
-    id: "share_fly_to_cart",
-    slug: "fly-to-cart",
-    title: "Fly-to-Cart Interactive Animation & Source Code",
-    description:
-      "Full source code for the high-conversion Fly-to-Cart e-commerce micro-interaction with parabolic bezier curve animation, particle burst, and responsive mobile support.",
-    language: "tsx",
-    codeSnippet: `// Fly-to-Cart Micro-Interaction Hook & Component
-import React, { useState, useRef } from "react";
-
-export interface FlyItem {
-  id: string;
-  startX: number;
-  startY: number;
-  targetX: number;
-  targetY: number;
-  image: string;
-}
-
-export function useFlyToCart() {
-  const [flyingItems, setFlyingItems] = useState<FlyItem[]>([]);
-
-  const triggerFly = (
-    sourceEl: HTMLElement,
-    targetEl: HTMLElement,
-    imageUrl: string
-  ) => {
-    const sourceRect = sourceEl.getBoundingClientRect();
-    const targetRect = targetEl.getBoundingClientRect();
-
-    const newItem: FlyItem = {
-      id: Math.random().toString(36).substring(7),
-      startX: sourceRect.left + sourceRect.width / 2,
-      startY: sourceRect.top + sourceRect.height / 2,
-      targetX: targetRect.left + targetRect.width / 2,
-      targetY: targetRect.top + targetRect.height / 2,
-      image: imageUrl,
-    };
-
-    setFlyingItems((prev) => [...prev, newItem]);
-
-    setTimeout(() => {
-      setFlyingItems((prev) => prev.filter((item) => item.id !== newItem.id));
-    }, 900);
-  };
-
-  return { flyingItems, triggerFly };
-}`,
-    fileUrl: "",
-    fileName: "fly-to-cart-source.zip",
-    fileSize: "8.4 MB",
-    tags: ["React", "Animation", "Next.js", "TailwindCSS", "E-Commerce"],
-    views: 64,
-    downloads: 29,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    isPublic: true,
-    authorName: "MIR Labs",
-    authorInstagram: "https://www.instagram.com/mir.labs/",
-  },
-  {
-    id: "share_threejs_keyboard",
-    slug: "threejs-keyboard-3d",
-    title: "Three.js 3D Interactive Frozen Keyboard Component",
-    description:
-      "Full source code for the custom Three.js + React Three Fiber 3D interactive keyboard featuring dynamic lighting, spring physics, and seasonal shaders.",
-    language: "tsx",
-    codeSnippet: `// Three.js Interactive Frozen Keyboard Hook & Scene
-import { Canvas } from "@react-three/fiber";
-import { Float, OrbitControls, MeshReflectorMaterial } from "@react-three/drei";
-import { Suspense, useRef } from "react";
-import * as THREE from "three";
-
-export function Keyboard3DShowcase() {
-  return (
-    <div className="w-full h-[500px] relative rounded-2xl overflow-hidden bg-ink-0 border border-ice-500/20 shadow-2xl">
-      <Canvas camera={{ position: [0, 6, 9], fov: 45 }}>
-        <ambientLight intensity={0.7} />
-        <directionalLight position={[10, 15, 10]} intensity={1.5} color="#cfe0f2" />
-        <pointLight position={[-5, 5, -5]} color="#4d85b6" intensity={2} />
-        <Suspense fallback={null}>
-          <Float speed={1.5} rotationIntensity={0.2} floatIntensity={0.5}>
-            <mesh rotation={[-Math.PI / 8, 0, 0]}>
-              <boxGeometry args={[6.2, 0.4, 2.8]} />
-              <meshStandardMaterial
-                color="#0a1428"
-                metalness={0.8}
-                roughness={0.2}
-                emissive="#1f4874"
-                emissiveIntensity={0.2}
-              />
-            </mesh>
-          </Float>
-        </Suspense>
-        <OrbitControls enableZoom={false} maxPolarAngle={Math.PI / 2.2} />
-      </Canvas>
-    </div>
-  );
-}`,
-    fileUrl: "",
-    fileName: "threejs-frozen-keyboard-source.zip",
-    fileSize: "14.8 MB",
-    tags: ["Three.js", "React Three Fiber", "Next.js", "TypeScript", "TailwindCSS"],
-    views: 142,
-    downloads: 58,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    isPublic: true,
-    authorName: "MIR Labs",
-    authorInstagram: "https://www.instagram.com/mir.labs/",
-  },
-  {
-    id: "share_auth_starter",
-    slug: "nextjs-fullstack-starter",
-    title: "Next.js 15 Full-Stack Glassmorphism Starter Pack",
-    description:
-      "Production-ready starter boilerplate with dark glassmorphism styling, season switching, Lucide icons, and responsive layouts.",
-    language: "typescript",
-    codeSnippet: `// lib/theme-engine.ts
-export type ThemeSeason = "winter" | "spring" | "summer" | "autumn";
-
-export function applyThemeSeason(season: ThemeSeason) {
-  if (typeof document === "undefined") return;
-  const root = document.documentElement;
-  root.setAttribute("data-season", season);
-  localStorage.setItem("user-preferred-season", season);
-}
-
-export function getInitialTheme(): ThemeSeason {
-  if (typeof window === "undefined") return "winter";
-  const stored = localStorage.getItem("user-preferred-season") as ThemeSeason | null;
-  return stored || "winter";
-}`,
-    fileUrl: "",
-    fileName: "nextjs-glass-template.zip",
-    fileSize: "32.1 MB",
-    tags: ["Next.js 15", "Boilerplate", "Full-Stack", "Design System"],
-    views: 89,
-    downloads: 34,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    isPublic: true,
-    authorName: "MIR Labs",
-    authorInstagram: "https://www.instagram.com/mir.labs/",
-  },
-];
+const INITIAL_SHARES: ShareItem[] = [];
 
 let inMemoryShares: ShareItem[] | null = null;
 const TMP_SHARES_FILE = "/tmp/shares.json";
@@ -263,7 +117,7 @@ async function saveSharesToKV(shares: ShareItem[]): Promise<boolean> {
 }
 
 export function getAllSharesSync(): ShareItem[] {
-  if (inMemoryShares && inMemoryShares.length > 0) {
+  if (inMemoryShares !== null) {
     return inMemoryShares;
   }
 
@@ -315,7 +169,7 @@ export async function getAllShares(): Promise<ShareItem[]> {
   }
 
   // 3. Return cached in-memory if available
-  if (inMemoryShares && inMemoryShares.length > 0) {
+  if (inMemoryShares !== null) {
     return inMemoryShares;
   }
 
@@ -429,12 +283,23 @@ export async function createShare(
 
 export async function updateShare(slug: string, updates: Partial<ShareItem>): Promise<ShareItem | null> {
   const shares = await getAllShares();
-  const index = shares.findIndex((s) => s.slug === slug || s.id === slug);
+  const cleanSlug = slug.toLowerCase().trim();
+  const index = shares.findIndex((s) => s.slug.toLowerCase() === cleanSlug || s.id === slug);
   if (index === -1) return null;
+
+  let newSlug = shares[index].slug;
+  if (updates.slug && updates.slug.trim()) {
+    newSlug = updates.slug
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+  }
 
   const updated: ShareItem = {
     ...shares[index],
     ...updates,
+    slug: newSlug || shares[index].slug,
+    title: updates.title !== undefined ? updates.title.trim() : shares[index].title,
     updatedAt: new Date().toISOString(),
   };
 

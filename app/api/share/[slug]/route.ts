@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getShareBySlug, deleteShare, incrementShareViews } from "@/lib/shares";
+import { getShareBySlug, deleteShare, incrementShareViews, updateShare } from "@/lib/shares";
 import { deleteR2File } from "@/lib/r2";
 
-function verifyAdmin(request: NextRequest): boolean {
+function verifyAdmin(request: NextRequest, bodyKey?: string): boolean {
   const adminSecret = process.env.ADMIN_SECRET_KEY || "mirlabs2026";
   const authHeader = request.headers.get("x-admin-key") || request.headers.get("authorization")?.replace("Bearer ", "");
-  return authHeader === adminSecret;
+  return authHeader === adminSecret || bodyKey === adminSecret;
 }
 
 export async function GET(
@@ -36,6 +36,62 @@ export async function GET(
   } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : "Failed to fetch share";
     console.error("API GET /api/share/[slug] error:", err);
+    return NextResponse.json(
+      { success: false, error: errorMsg },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ slug: string }> }
+) {
+  try {
+    const { slug } = await params;
+    const body = await request.json().catch(() => ({}));
+    const isAdmin = verifyAdmin(request, body.adminKey);
+
+    if (!isAdmin) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized. Incorrect Admin PIN." },
+        { status: 401 }
+      );
+    }
+
+    const share = await getShareBySlug(slug);
+    if (!share) {
+      return NextResponse.json(
+        { success: false, error: "Share not found." },
+        { status: 404 }
+      );
+    }
+
+    const updated = await updateShare(slug, {
+      title: body.title !== undefined ? body.title : share.title,
+      slug: body.slug !== undefined ? body.slug : share.slug,
+      description: body.description !== undefined ? body.description : share.description,
+      language: body.language !== undefined ? body.language : share.language,
+      codeSnippet: body.codeSnippet !== undefined ? body.codeSnippet : share.codeSnippet,
+      fileUrl: body.fileUrl !== undefined ? body.fileUrl : share.fileUrl,
+      fileName: body.fileName !== undefined ? body.fileName : share.fileName,
+      fileSize: body.fileSize !== undefined ? body.fileSize : share.fileSize,
+      fileKey: body.fileKey !== undefined ? body.fileKey : share.fileKey,
+      tags: body.tags !== undefined ? (Array.isArray(body.tags) ? body.tags : body.tags.split(",").map((t: string) => t.trim())) : share.tags,
+      isPublic: body.isPublic !== undefined ? Boolean(body.isPublic) : share.isPublic,
+      authorName: body.authorName !== undefined ? body.authorName : share.authorName,
+      authorInstagram: body.authorInstagram !== undefined ? body.authorInstagram : share.authorInstagram,
+    });
+
+    return NextResponse.json({
+      success: true,
+      share: updated,
+      shareUrl: `/share/${updated?.slug || slug}`,
+      message: "Share updated successfully.",
+    });
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : "Failed to update share";
+    console.error("API PUT /api/share/[slug] error:", err);
     return NextResponse.json(
       { success: false, error: errorMsg },
       { status: 500 }
@@ -86,3 +142,4 @@ export async function DELETE(
     );
   }
 }
+

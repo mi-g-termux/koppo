@@ -19,6 +19,9 @@ import {
   RefreshCw,
   FolderOpen,
   Link as LinkIcon,
+  Pencil,
+  X,
+  AlertCircle,
 } from "lucide-react";
 import { ShareItem } from "@/lib/shares";
 
@@ -37,6 +40,17 @@ const LANGUAGES = [
   { label: "Bash / Shell (.sh)", value: "bash" },
 ];
 
+const DEMO_SLUGS = ["fly-to-cart", "threejs-keyboard-3d", "nextjs-fullstack-starter"];
+const DEMO_IDS = ["share_fly_to_cart", "share_threejs_keyboard", "share_auth_starter"];
+
+function isDemoShare(share: ShareItem): boolean {
+  if (DEMO_IDS.includes(share.id)) return true;
+  if (DEMO_SLUGS.includes(share.slug) && (!share.fileUrl || share.fileUrl.trim() === "")) {
+    return true;
+  }
+  return false;
+}
+
 export default function AdminPage() {
   const [adminPin, setAdminPin] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -47,7 +61,7 @@ export default function AdminPage() {
   const [r2Configured, setR2Configured] = useState(false);
   const [databaseConfigured, setDatabaseConfigured] = useState(false);
 
-  // Form fields
+  // Form fields for creating a new share
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
   const [description, setDescription] = useState("");
@@ -72,7 +86,78 @@ export default function AdminPage() {
 
   const [submitting, setSubmitting] = useState(false);
   const [successShareUrl, setSuccessShareUrl] = useState<string | null>(null);
-  const [copiedLink, setCopiedLink] = useState(false);
+  const [copiedTarget, setCopiedTarget] = useState<string | null>(null);
+
+  // Edit Modal State
+  const [editingShare, setEditingShare] = useState<ShareItem | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editSlug, setEditSlug] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editFileUrl, setEditFileUrl] = useState("");
+  const [editFileName, setEditFileName] = useState("");
+  const [editFileSize, setEditFileSize] = useState("");
+  const [editLanguage, setEditLanguage] = useState("typescript");
+  const [editCodeSnippet, setEditCodeSnippet] = useState("");
+  const [editTags, setEditTags] = useState("");
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [editError, setEditError] = useState("");
+
+  // Unify merge and synchronization
+  const syncAndMergeShares = async (serverShares: ShareItem[], currentPin: string) => {
+    let localCustom: ShareItem[] = [];
+    let deletedSlugs: string[] = [];
+
+    try {
+      if (typeof window !== "undefined") {
+        localCustom = JSON.parse(localStorage.getItem("mir_custom_shares") || "[]");
+        deletedSlugs = JSON.parse(localStorage.getItem("mir_deleted_slugs") || "[]");
+      }
+    } catch (e) {
+      console.warn("Could not read local storage shares:", e);
+    }
+
+    // Scrub any legacy demo shares from local storage
+    localCustom = localCustom.filter((s) => !isDemoShare(s) && !deletedSlugs.includes(s.slug));
+    if (typeof window !== "undefined") {
+      localStorage.setItem("mir_custom_shares", JSON.stringify(localCustom));
+    }
+
+    // Filter server shares: purge demo shares and deleted slugs
+    const filteredServer = (serverShares || []).filter(
+      (s) => !isDemoShare(s) && !deletedSlugs.includes(s.slug)
+    );
+
+    // Combine: localCustom take precedence
+    const map = new Map<string, ShareItem>();
+    for (const s of filteredServer) {
+      map.set(s.slug, s);
+    }
+    for (const c of localCustom) {
+      map.set(c.slug, c);
+    }
+
+    const merged = Array.from(map.values());
+    setShares(merged);
+
+    // Background sync: push any missing shares to server so public links work permanently
+    const missingOnServer = localCustom.filter((c) => !filteredServer.some((s) => s.slug === c.slug));
+    if (missingOnServer.length > 0 && currentPin) {
+      for (const item of missingOnServer) {
+        try {
+          await fetch("/api/share", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-admin-key": currentPin,
+            },
+            body: JSON.stringify(item),
+          });
+        } catch (err) {
+          console.warn("Failed to sync local share to server:", err);
+        }
+      }
+    }
+  };
 
   // On mount, check if password was stored in session
   useEffect(() => {
@@ -102,9 +187,9 @@ export default function AdminPage() {
       } else {
         setIsAuthenticated(true);
         sessionStorage.setItem("mir_admin_pin", pinToTest.trim());
-        setShares(data.shares || []);
         setR2Configured(Boolean(data.r2Configured));
         setDatabaseConfigured(Boolean(data.databaseConfigured));
+        await syncAndMergeShares(data.shares || [], pinToTest.trim());
       }
     } catch {
       setAuthError("Failed to connect to API server.");
@@ -120,27 +205,9 @@ export default function AdminPage() {
       });
       const data = await res.json();
       if (data.success) {
-        const serverShares: ShareItem[] = data.shares || [];
-        const localCustom: ShareItem[] =
-          typeof window !== "undefined"
-            ? JSON.parse(localStorage.getItem("mir_custom_shares") || "[]")
-            : [];
-        const deletedSlugs: string[] =
-          typeof window !== "undefined"
-            ? JSON.parse(localStorage.getItem("mir_deleted_slugs") || "[]")
-            : [];
-
-        // Combine custom links with server links (custom links take precedence)
-        const combined = [...localCustom];
-        for (const s of serverShares) {
-          if (!combined.some((c) => c.slug === s.slug) && !deletedSlugs.includes(s.slug)) {
-            combined.push(s);
-          }
-        }
-        const finalShares = combined.filter((s) => !deletedSlugs.includes(s.slug));
-        setShares(finalShares);
         setR2Configured(Boolean(data.r2Configured));
         setDatabaseConfigured(Boolean(data.databaseConfigured));
+        await syncAndMergeShares(data.shares || [], adminPin);
       }
     } catch (err: unknown) {
       console.error("Error fetching shares:", err);
@@ -282,7 +349,7 @@ export default function AdminPage() {
           fileName: finalFileName,
           fileSize: finalFileSize,
           fileKey: finalFileKey,
-          tags: tags ? tags.split(",").map((t) => t.trim()) : [],
+          tags: tags ? tags.split(",").map((t) => t.trim()).filter(Boolean) : [],
           isPublic: true,
         }),
       });
@@ -312,7 +379,7 @@ export default function AdminPage() {
             );
             const updated = [
               createdShare,
-              ...localCustom.filter((s) => s.slug !== createdShare.slug),
+              ...localCustom.filter((s) => s.slug !== createdShare.slug && !isDemoShare(s)),
             ];
             localStorage.setItem("mir_custom_shares", JSON.stringify(updated));
 
@@ -323,7 +390,7 @@ export default function AdminPage() {
           }
           setShares((prev) => [
             createdShare,
-            ...prev.filter((s) => s.slug !== createdShare.slug),
+            ...prev.filter((s) => s.slug !== createdShare.slug && !isDemoShare(s)),
           ]);
         }
 
@@ -345,6 +412,102 @@ export default function AdminPage() {
       alert("Error: " + msg);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  // Open Edit Modal
+  const openEditModal = (item: ShareItem) => {
+    setEditingShare(item);
+    setEditTitle(item.title || "");
+    setEditSlug(item.slug || "");
+    setEditDescription(item.description || "");
+    setEditFileUrl(item.fileUrl || "");
+    setEditFileName(item.fileName || "");
+    setEditFileSize(item.fileSize || "");
+    setEditLanguage(item.language || "typescript");
+    setEditCodeSnippet(item.codeSnippet || "");
+    setEditTags(item.tags ? item.tags.join(", ") : "");
+    setEditError("");
+  };
+
+  // Save Edit Changes
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingShare) return;
+    if (!editTitle.trim()) {
+      setEditError("Title is required.");
+      return;
+    }
+    setIsSavingEdit(true);
+    setEditError("");
+
+    try {
+      const res = await fetch(`/api/share/${editingShare.slug}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-key": adminPin,
+        },
+        body: JSON.stringify({
+          title: editTitle.trim(),
+          slug: editSlug.trim(),
+          description: editDescription.trim(),
+          fileUrl: editFileUrl.trim(),
+          fileName: editFileName.trim(),
+          fileSize: editFileSize.trim(),
+          language: editLanguage,
+          codeSnippet: editCodeSnippet,
+          tags: editTags ? editTags.split(",").map((t) => t.trim()).filter(Boolean) : [],
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setEditError(data.error || "Failed to update share.");
+        setIsSavingEdit(false);
+        return;
+      }
+
+      const updatedShare: ShareItem = data.share || {
+        ...editingShare,
+        title: editTitle.trim(),
+        slug: editSlug.trim() || editingShare.slug,
+        description: editDescription.trim(),
+        fileUrl: editFileUrl.trim(),
+        fileName: editFileName.trim(),
+        fileSize: editFileSize.trim(),
+        language: editLanguage,
+        codeSnippet: editCodeSnippet,
+        tags: editTags ? editTags.split(",").map((t) => t.trim()).filter(Boolean) : [],
+        updatedAt: new Date().toISOString(),
+      };
+
+      // Update state
+      setShares((prev) =>
+        prev.map((s) => (s.slug === editingShare.slug || s.id === editingShare.id ? updatedShare : s))
+      );
+
+      // Update localStorage
+      if (typeof window !== "undefined") {
+        const localCustom: ShareItem[] = JSON.parse(
+          localStorage.getItem("mir_custom_shares") || "[]"
+        );
+        const updatedLocal = localCustom.map((s) =>
+          s.slug === editingShare.slug || s.id === editingShare.id ? updatedShare : s
+        );
+        if (!updatedLocal.some((s) => s.slug === updatedShare.slug)) {
+          updatedLocal.unshift(updatedShare);
+        }
+        localStorage.setItem("mir_custom_shares", JSON.stringify(updatedLocal));
+      }
+
+      setEditingShare(null);
+      alert("Share updated successfully!");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Update failed";
+      setEditError(msg);
+    } finally {
+      setIsSavingEdit(false);
     }
   };
 
@@ -383,10 +546,10 @@ export default function AdminPage() {
     }
   };
 
-  const copyToClipboard = (text: string) => {
+  const copyToClipboard = (text: string, targetKey: string = "general") => {
     navigator.clipboard.writeText(text);
-    setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 2000);
+    setCopiedTarget(targetKey);
+    setTimeout(() => setCopiedTarget(null), 2000);
   };
 
   // 🔒 Lock Screen
@@ -404,7 +567,7 @@ export default function AdminPage() {
               MIR Labs Admin Portal
             </h2>
             <p className="mt-2 text-xs text-[#a6c5e4]">
-              Enter your Admin Secret Password to create and manage your shareable code links.
+              Enter your Admin Secret Password to manage your files and download links.
             </p>
 
             <form
@@ -461,7 +624,7 @@ export default function AdminPage() {
               </h1>
             </div>
             <p className="text-xs text-[#a6c5e4] mt-1">
-              Create direct links to send to your Instagram followers or clients.
+              Create, view, and edit direct download links to send to users or Instagram followers.
             </p>
           </div>
 
@@ -471,7 +634,7 @@ export default function AdminPage() {
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-[#0a1428] hover:bg-[#131f3a] text-[#cfe0f2] border border-[#4d85b6]/30 transition-all cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loadingShares ? "animate-spin" : ""}`} />
-            <span>Refresh ({shares.length} links)</span>
+            <span>Refresh ({shares.length} active links)</span>
           </button>
         </div>
 
@@ -482,13 +645,13 @@ export default function AdminPage() {
             <span className="font-bold text-white">
               {databaseConfigured
                 ? "Persistent Database Active (Cloudflare R2 / Vercel KV)"
-                : "Portable Link Engine Active (Zero Database Required)"}
+                : "Active Storage Engine (Direct Links + Portable URLs)"}
             </span>
           </div>
           <span className="text-[#a6c5e4]">
             {databaseConfigured
               ? "All created links are permanently stored and accessible via clean short URLs."
-              : "Links with attached files work 100% worldwide for all users! Connect Vercel KV or R2 anytime for clean short URLs."}
+              : "All created links are saved locally and synced to server. Google Drive links work 100% worldwide!"}
           </span>
         </div>
 
@@ -503,21 +666,15 @@ export default function AdminPage() {
               <p className="text-xs text-white mt-1 font-mono break-all font-semibold">
                 {successShareUrl}
               </p>
-              {!databaseConfigured && successShareUrl.includes("?") && (
-                <p className="text-[11px] text-[#48cae4] mt-1.5 font-sans flex items-center gap-1.5">
-                  <span>⚡</span>
-                  <span>This portable link works 100% worldwide for any visitor without a database. Ready to send!</span>
-                </p>
-              )}
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
               <button
-                onClick={() => copyToClipboard(successShareUrl)}
+                onClick={() => copyToClipboard(successShareUrl, "banner")}
                 className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold bg-emerald-500 text-black hover:bg-emerald-400 transition-all cursor-pointer shadow-lg"
               >
-                {copiedLink ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{copiedLink ? "Copied!" : "Copy Link for Instagram"}</span>
+                {copiedTarget === "banner" ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                <span>{copiedTarget === "banner" ? "Copied!" : "Copy Link for Users"}</span>
               </button>
 
               <Link
@@ -594,17 +751,17 @@ export default function AdminPage() {
           <div className="rounded-3xl p-6 sm:p-8 bg-[#0a1428] border border-[#4d85b6]/30 shadow-xl space-y-6">
             <h2 className="text-base font-bold text-white flex items-center gap-2">
               <FileArchive className="w-4 h-4 text-[#7aa6d0]" />
-              <span>2. File Download Attachment (ZIP / Archive / Google Drive)</span>
+              <span>2. File Download Attachment (Google Drive, Dropbox, or Direct Upload)</span>
             </h2>
 
-            {/* External Link Input (Easiest, works with 500MB+ files) */}
+            {/* External Link Input */}
             <div className="p-5 rounded-2xl bg-[#050b16] border border-[#4d85b6]/40 space-y-4">
               <div className="flex items-center gap-2 text-sm font-bold text-[#7aa6d0]">
                 <LinkIcon className="w-4 h-4" />
-                <span>Option A: Paste Google Drive / Dropbox / GitHub Download Link (Recommended for Large Files)</span>
+                <span>Option A: Paste Google Drive / Dropbox / Cloud Download Link (Recommended)</span>
               </div>
               <p className="text-xs text-[#a6c5e4]">
-                Upload your large `.zip` file to your Google Drive, copy the share link, and paste it here. Your website will automatically give your visitor a direct 1-click download button under your domain!
+                Upload your large `.zip` or project files to Google Drive or Dropbox, copy the share link, and paste it here. Your admin dashboard will store this exact link so you never lose it, and users get a clean 1-click download button!
               </p>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -726,85 +883,215 @@ export default function AdminPage() {
 
         {/* Existing Active Links Section */}
         <div className="mt-16 pt-8 border-t border-[#4d85b6]/20 space-y-6">
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <FolderOpen className="w-5 h-5 text-[#7aa6d0]" />
-            <span>Your Generated Links ({shares.length})</span>
-          </h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <FolderOpen className="w-5 h-5 text-[#7aa6d0]" />
+              <span>Your Added Files & Links ({shares.length})</span>
+            </h2>
+            <span className="text-xs text-[#a6c5e4]">
+              {shares.length === 0 ? "No active links" : "Only showing files you added"}
+            </span>
+          </div>
 
           {shares.length === 0 ? (
-            <div className="text-center py-12 rounded-2xl border border-dashed border-[#4d85b6]/30 bg-[#0a1428]/50">
-              <p className="text-xs text-gray-400">No links created yet. Use the form above to generate your first link!</p>
+            <div className="text-center py-16 rounded-3xl border border-dashed border-[#4d85b6]/30 bg-[#0a1428]/50 space-y-2">
+              <FolderOpen className="w-10 h-10 text-[#4d85b6]/50 mx-auto mb-2" />
+              <p className="text-sm font-semibold text-white">No files or links added yet</p>
+              <p className="text-xs text-gray-400 max-w-sm mx-auto">
+                Use the form above to add your first project or code download link. It will appear here permanently with direct file URLs and 1-click copy buttons.
+              </p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {shares.map((item) => (
                 <div
-                  key={item.id}
-                  className="p-4 sm:p-5 rounded-2xl bg-[#0a1428] border border-[#4d85b6]/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-4"
+                  key={item.id || item.slug}
+                  className="p-5 sm:p-6 rounded-2xl bg-[#0a1428] border border-[#4d85b6]/30 shadow-lg hover:border-[#7aa6d0]/40 transition-all space-y-4"
                 >
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-sm text-white">{item.title}</span>
-                      {item.fileSize && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-[#4d85b6]/20 text-[#cfe0f2]">
-                          {item.fileSize}
+                  {/* Top Row: Title, Badges, Metrics & Actions */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#4d85b6]/20">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-bold text-base text-white">{item.title}</span>
+                        {item.fileSize && (
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono bg-[#4d85b6]/20 text-[#cfe0f2] border border-[#4d85b6]/30">
+                            {item.fileSize}
+                          </span>
+                        )}
+                        {item.language && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-[#050b16] text-[#7aa6d0] border border-[#4d85b6]/30">
+                            {item.language.toUpperCase()}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-3 text-xs text-gray-400 font-mono mt-1.5">
+                        <span className="text-[#a6c5e4]">/share/{item.slug}</span>
+                        <span>•</span>
+                        <span className="flex items-center gap-1">
+                          <Eye className="w-3.5 h-3.5 text-[#7aa6d0]" />
+                          {item.views} views
                         </span>
-                      )}
+                        <span>•</span>
+                        <span className="flex items-center gap-1">
+                          <Download className="w-3.5 h-3.5 text-emerald-400" />
+                          {item.downloads} downloads
+                        </span>
+                        {item.createdAt && (
+                          <>
+                            <span>•</span>
+                            <span className="text-gray-400">
+                              {new Date(item.createdAt).toLocaleDateString("en-US", {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              })}
+                            </span>
+                          </>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3 text-xs text-gray-400 font-mono mt-1">
-                      <span>/share/{item.slug}</span>
-                      <span>•</span>
-                      <span className="flex items-center gap-1">
-                        <Eye className="w-3 h-3 text-[#7aa6d0]" />
-                        {item.views} views
-                      </span>
-                      <span>•</span>
-                      <span className="flex items-center gap-1">
-                        <Download className="w-3 h-3 text-[#7aa6d0]" />
-                        {item.downloads} downloads
-                      </span>
+
+                    {/* Actions: Edit & Delete */}
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => openEditModal(item)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-[#7aa6d0]/15 text-[#cfe0f2] hover:bg-[#7aa6d0]/25 border border-[#7aa6d0]/40 transition-all cursor-pointer"
+                        title="Edit this share details & file link"
+                      >
+                        <Pencil className="w-3.5 h-3.5 text-[#7aa6d0]" />
+                        <span>Edit</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteShare(item.slug)}
+                        className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 transition-all cursor-pointer"
+                        title="Delete Share Link"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        let url = `${window.location.origin}/share/${item.slug}`;
-                        if (item.fileUrl && !databaseConfigured) {
-                          url += `?f=${encodeURIComponent(item.fileUrl)}&t=${encodeURIComponent(item.title)}`;
-                          if (item.fileSize) url += `&s=${encodeURIComponent(item.fileSize)}`;
+                  {/* Middle Row 1: Direct File Download Link (Google Drive / Direct URL) */}
+                  <div className="p-3.5 rounded-xl bg-[#050b16] border border-[#4d85b6]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-start sm:items-center gap-2.5 min-w-0 flex-1">
+                      <FileArchive className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5 sm:mt-0" />
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[11px] font-semibold text-[#a6c5e4] flex items-center gap-2">
+                          <span>Target Download File:</span>
+                          {item.fileName && (
+                            <span className="text-gray-400 font-mono">({item.fileName})</span>
+                          )}
+                        </div>
+                        {item.fileUrl ? (
+                          <p
+                            className="text-xs text-emerald-300 font-mono truncate mt-0.5"
+                            title={item.fileUrl}
+                          >
+                            {item.fileUrl}
+                          </p>
+                        ) : item.codeSnippet ? (
+                          <p className="text-xs text-[#a6c5e4] italic mt-0.5">
+                            Direct code snippet provided (downloadable as {item.language || "text"} file)
+                          </p>
+                        ) : (
+                          <p className="text-xs text-amber-400/80 italic mt-0.5">
+                            No file URL attached yet (click Edit to attach Google Drive / direct link)
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {item.fileUrl && (
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => copyToClipboard(item.fileUrl!, `file_${item.slug}`)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[#0a1428] text-[#cfe0f2] hover:bg-[#131f3a] border border-[#4d85b6]/30 transition-all cursor-pointer"
+                          title="Copy the direct Google Drive/cloud link"
+                        >
+                          {copiedTarget === `file_${item.slug}` ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 text-emerald-400" />
+                              <span className="text-emerald-400">Copied!</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3.5 h-3.5 text-[#7aa6d0]" />
+                              <span>Copy Direct File Link</span>
+                            </>
+                          )}
+                        </button>
+
+                        <a
+                          href={item.fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-1.5 rounded-lg bg-[#0a1428] text-gray-300 hover:text-white border border-[#4d85b6]/30 transition-all"
+                          title="Open direct file link in new tab"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Middle Row 2: Public Share Page URL */}
+                  <div className="p-3.5 rounded-xl bg-[#071120] border border-[#00b4d8]/25 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-start sm:items-center gap-2.5 min-w-0 flex-1">
+                      <LinkIcon className="w-4 h-4 text-[#00b4d8] shrink-0 mt-0.5 sm:mt-0" />
+                      <div className="min-w-0 flex-1">
+                        <span className="text-[11px] font-semibold text-[#a6c5e4]">
+                          Public Link for Users (Instagram / DM):
+                        </span>
+                        <p className="text-xs text-[#00b4d8] font-mono font-semibold truncate mt-0.5">
+                          {typeof window !== "undefined" ? window.location.origin : ""}/share/{item.slug}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          let url = `${window.location.origin}/share/${item.slug}`;
+                          if (item.fileUrl && !databaseConfigured) {
+                            url += `?f=${encodeURIComponent(item.fileUrl)}&t=${encodeURIComponent(item.title)}`;
+                            if (item.fileSize) url += `&s=${encodeURIComponent(item.fileSize)}`;
+                          }
+                          copyToClipboard(url, `share_${item.slug}`);
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#00b4d8]/20 text-[#00b4d8] hover:bg-[#00b4d8]/30 border border-[#00b4d8]/40 transition-all cursor-pointer"
+                      >
+                        {copiedTarget === `share_${item.slug}` ? (
+                          <>
+                            <Check className="w-3.5 h-3.5 text-emerald-400" />
+                            <span className="text-emerald-400">Copied!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3.5 h-3.5" />
+                            <span>Copy Link for Users</span>
+                          </>
+                        )}
+                      </button>
+
+                      <a
+                        href={
+                          item.fileUrl && !databaseConfigured
+                            ? `/share/${item.slug}?f=${encodeURIComponent(item.fileUrl)}&t=${encodeURIComponent(item.title)}${item.fileSize ? `&s=${encodeURIComponent(item.fileSize)}` : ""}`
+                            : `/share/${item.slug}`
                         }
-                        copyToClipboard(url);
-                      }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-[#4d85b6]/20 text-[#cfe0f2] hover:bg-[#4d85b6]/30 border border-[#4d85b6]/40 transition-all cursor-pointer"
-                    >
-                      <Copy className="w-3.5 h-3.5" />
-                      <span>Copy Link</span>
-                    </button>
-
-                    <a
-                      href={
-                        item.fileUrl && !databaseConfigured
-                          ? `/share/${item.slug}?f=${encodeURIComponent(item.fileUrl)}&t=${encodeURIComponent(item.title)}${item.fileSize ? `&s=${encodeURIComponent(item.fileSize)}` : ""}`
-                          : `/share/${item.slug}`
-                      }
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-2 rounded-xl bg-[#050b16] text-gray-300 hover:text-white border border-[#4d85b6]/30 transition-all cursor-pointer"
-                      title="Test Link"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                    </a>
-
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteShare(item.slug)}
-                      className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 transition-all cursor-pointer"
-                      title="Delete Share Link"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1.5 rounded-lg bg-[#050b16] text-gray-300 hover:text-white border border-[#4d85b6]/30 transition-all"
+                        title="Test Public Download Page"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -812,6 +1099,179 @@ export default function AdminPage() {
           )}
         </div>
       </main>
+
+      {/* ✏️ EDIT MODAL */}
+      {editingShare && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="max-w-2xl w-full my-8 bg-[#0a1428] border border-[#4d85b6]/40 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
+            <div className="flex items-center justify-between pb-4 border-b border-[#4d85b6]/20">
+              <div className="flex items-center gap-2">
+                <Pencil className="w-5 h-5 text-[#7aa6d0]" />
+                <h2 className="text-lg font-bold text-white">Edit Share: {editingShare.title}</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingShare(null)}
+                className="p-2 rounded-xl text-gray-400 hover:text-white hover:bg-[#050b16] transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEdit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-[#cfe0f2] mb-1.5">
+                  Project / Code Title *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl bg-[#050b16] border border-[#4d85b6]/30 text-sm text-white focus:outline-none focus:border-[#7aa6d0]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#cfe0f2] mb-1.5">
+                  Custom URL Slug * (/share/...)
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editSlug}
+                  onChange={(e) =>
+                    setEditSlug(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ""))
+                  }
+                  className="w-full px-4 py-2.5 rounded-xl bg-[#050b16] border border-[#4d85b6]/30 text-sm font-mono text-white focus:outline-none focus:border-[#7aa6d0]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#cfe0f2] mb-1.5">
+                  Direct File Download Link (Google Drive / Dropbox / Direct URL)
+                </label>
+                <input
+                  type="url"
+                  value={editFileUrl}
+                  onChange={(e) => setEditFileUrl(e.target.value)}
+                  placeholder="https://drive.google.com/file/d/..."
+                  className="w-full px-4 py-2.5 rounded-xl bg-[#050b16] border border-[#4d85b6]/30 text-sm text-white font-mono focus:outline-none focus:border-[#7aa6d0]"
+                />
+                <p className="text-[11px] text-gray-400 mt-1">
+                  You can change this link anytime. The direct file will always be displayed on your dashboard.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-[#cfe0f2] mb-1.5">
+                    File Name
+                  </label>
+                  <input
+                    type="text"
+                    value={editFileName}
+                    onChange={(e) => setEditFileName(e.target.value)}
+                    placeholder="project-source.zip"
+                    className="w-full px-4 py-2.5 rounded-xl bg-[#050b16] border border-[#4d85b6]/30 text-sm text-white focus:outline-none focus:border-[#7aa6d0]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-[#cfe0f2] mb-1.5">
+                    File Size
+                  </label>
+                  <input
+                    type="text"
+                    value={editFileSize}
+                    onChange={(e) => setEditFileSize(e.target.value)}
+                    placeholder="e.g. 24.5 MB"
+                    className="w-full px-4 py-2.5 rounded-xl bg-[#050b16] border border-[#4d85b6]/30 text-sm text-white focus:outline-none focus:border-[#7aa6d0]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#cfe0f2] mb-1.5">
+                  Description
+                </label>
+                <textarea
+                  rows={2}
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl bg-[#050b16] border border-[#4d85b6]/30 text-sm text-white focus:outline-none focus:border-[#7aa6d0]"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-[#cfe0f2] mb-1.5">
+                    Language (if code attached)
+                  </label>
+                  <select
+                    value={editLanguage}
+                    onChange={(e) => setEditLanguage(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl bg-[#050b16] border border-[#4d85b6]/30 text-xs text-white focus:outline-none"
+                  >
+                    {LANGUAGES.map((l) => (
+                      <option key={l.value} value={l.value}>
+                        {l.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-[#cfe0f2] mb-1.5">
+                    Tags (comma separated)
+                  </label>
+                  <input
+                    type="text"
+                    value={editTags}
+                    onChange={(e) => setEditTags(e.target.value)}
+                    placeholder="React, Animation, Next.js"
+                    className="w-full px-4 py-2.5 rounded-xl bg-[#050b16] border border-[#4d85b6]/30 text-sm text-white focus:outline-none focus:border-[#7aa6d0]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#cfe0f2] mb-1.5">
+                  Code Snippet (Optional)
+                </label>
+                <textarea
+                  rows={5}
+                  value={editCodeSnippet}
+                  onChange={(e) => setEditCodeSnippet(e.target.value)}
+                  className="w-full p-3 rounded-xl bg-[#050b16] border border-[#4d85b6]/30 font-mono text-xs text-white focus:outline-none focus:border-[#7aa6d0]"
+                />
+              </div>
+
+              {editError && (
+                <div className="p-3 rounded-xl bg-red-500/20 border border-red-500/40 text-xs text-red-300 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{editError}</span>
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#4d85b6]/20">
+                <button
+                  type="button"
+                  onClick={() => setEditingShare(null)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold bg-[#050b16] text-gray-300 hover:text-white border border-[#4d85b6]/30 transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingEdit}
+                  className="px-6 py-2.5 rounded-xl text-xs font-bold bg-[#7aa6d0] hover:bg-[#a6c5e4] text-[#050b16] shadow-lg transition-all cursor-pointer"
+                >
+                  {isSavingEdit ? "Saving..." : "Save Changes"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <ShareFooter />
     </div>
