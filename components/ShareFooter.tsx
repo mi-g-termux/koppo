@@ -63,7 +63,7 @@ export default function ShareFooter() {
           </div>
         </div>
 
-        {/* Copyright & Links */}
+        {/* Copyright */}
         <div className="mt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-ice-400/60 gap-4">
           <p>© {new Date().getFullYear()} MIR Labs. All rights reserved.</p>
           <div className="flex items-center gap-4">
@@ -71,12 +71,8 @@ export default function ShareFooter() {
               Portfolio
             </Link>
             <span>•</span>
-            <Link href="/share" className="hover:text-ice-200 transition-colors">
-              Code Vault
-            </Link>
-            <span>•</span>
-            <Link href="/share/admin" className="hover:text-ice-200 transition-colors">
-              Admin Login
+            <Link href="https://www.instagram.com/mir.labs/" target="_blank" rel="noopener noreferrer" className="hover:text-ice-200 transition-colors">
+              Instagram
             </Link>
           </div>
         </div>

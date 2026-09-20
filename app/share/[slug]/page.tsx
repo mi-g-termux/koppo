@@ -78,11 +78,11 @@ export default async function ShareDetailPage({ params }: Props) {
         {/* Breadcrumb & Navigation */}
         <div className="flex items-center justify-between gap-4 mb-6">
           <Link
-            href="/share"
+            href="/"
             className="inline-flex items-center gap-2 text-xs font-medium text-ice-400 hover:text-ice-200 transition-colors"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Back to Code Vault</span>
+            <span>Visit MIR Labs Portfolio</span>
           </Link>
 
           <div className="flex items-center gap-3 text-xs text-ice-400/80">

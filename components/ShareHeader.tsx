@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Sparkles, ExternalLink, ShieldCheck } from "lucide-react";
+import { Sparkles, ExternalLink } from "lucide-react";
 
 export default function ShareHeader() {
   return (
@@ -20,21 +20,11 @@ export default function ShareHeader() {
             <span className="font-bold text-sm tracking-tight text-white group-hover:text-ice-300 transition-colors">
               MIR Labs
             </span>
-            <span className="hidden sm:inline text-xs text-ice-400/70 border-l border-ice-500/20 pl-2">
-              Code Vault
-            </span>
           </Link>
         </div>
 
         {/* Right Navigation & CTAs */}
         <div className="flex items-center gap-2 sm:gap-3">
-          <Link
-            href="/share/admin"
-            title="Admin Share Manager"
-            className="p-2 rounded-xl text-ice-400 hover:text-ice-100 hover:bg-ice-500/15 border border-transparent hover:border-ice-500/20 transition-all cursor-pointer"
-          >
-            <ShieldCheck className="w-4 h-4" />
-          </Link>
 
           <Link
             href="https://www.instagram.com/mir.labs/"
