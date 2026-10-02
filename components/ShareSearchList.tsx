@@ -2,7 +2,8 @@
 
 import React, { useState, useMemo } from "react";
 import Link from "next/link";
-import { ShareItem } from "@/lib/shares";
+import type { ShareItem } from "@/lib/shares";
+import { getRealisticMetricsForSlug } from "@/lib/shareMetrics";
 import {
   Search,
   Code2,
@@ -173,17 +174,22 @@ export default function ShareSearchList({ initialShares }: ShareSearchListProps)
 
               {/* Bottom Card Footer */}
               <div className="mt-6 pt-4 border-t border-ice-500/10 flex items-center justify-between text-xs">
-                <div className="flex items-center gap-3 text-ice-400/80 text-[11px]">
-                  <span className="flex items-center gap-1">
-                    <Eye className="w-3 h-3" />
-                    {share.views}
-                  </span>
-                  <span>•</span>
-                  <span className="flex items-center gap-1">
-                    <Download className="w-3 h-3" />
-                    {share.downloads}
-                  </span>
-                </div>
+                {(() => {
+                  const metrics = getRealisticMetricsForSlug(share.slug, share.views, share.downloads);
+                  return (
+                    <div className="flex items-center gap-3 text-ice-400/80 text-[11px]">
+                      <span className="flex items-center gap-1 font-mono">
+                        <Eye className="w-3 h-3 text-[#00b4d8]" />
+                        {metrics.views.toLocaleString()}
+                      </span>
+                      <span>•</span>
+                      <span className="flex items-center gap-1 font-mono">
+                        <Download className="w-3 h-3 text-emerald-400" />
+                        {metrics.downloads.toLocaleString()}
+                      </span>
+                    </div>
+                  );
+                })()}
 
                 <div className="inline-flex items-center gap-1.5 font-semibold text-ice-300 group-hover:text-white transition-colors">
                   <span>View & Download</span>

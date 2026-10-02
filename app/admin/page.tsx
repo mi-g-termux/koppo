@@ -23,7 +23,8 @@ import {
   X,
   AlertCircle,
 } from "lucide-react";
-import { ShareItem } from "@/lib/shares";
+import type { ShareItem } from "@/lib/shares";
+import { getRealisticMetricsForSlug } from "@/lib/shareMetrics";
 
 const LANGUAGES = [
   { label: "TypeScript (.ts)", value: "typescript" },
@@ -925,31 +926,36 @@ export default function AdminPage() {
                           </span>
                         )}
                       </div>
-                      <div className="flex flex-wrap items-center gap-3 text-xs text-gray-400 font-mono mt-1.5">
-                        <span className="text-[#a6c5e4]">/share/{item.slug}</span>
-                        <span>•</span>
-                        <span className="flex items-center gap-1">
-                          <Eye className="w-3.5 h-3.5 text-[#7aa6d0]" />
-                          {item.views} views
-                        </span>
-                        <span>•</span>
-                        <span className="flex items-center gap-1">
-                          <Download className="w-3.5 h-3.5 text-emerald-400" />
-                          {item.downloads} downloads
-                        </span>
-                        {item.createdAt && (
-                          <>
+                      {(() => {
+                        const metrics = getRealisticMetricsForSlug(item.slug, item.views, item.downloads);
+                        return (
+                          <div className="flex flex-wrap items-center gap-3 text-xs text-gray-400 font-mono mt-1.5">
+                            <span className="text-[#a6c5e4]">/share/{item.slug}</span>
                             <span>•</span>
-                            <span className="text-gray-400">
-                              {new Date(item.createdAt).toLocaleDateString("en-US", {
-                                month: "short",
-                                day: "numeric",
-                                year: "numeric",
-                              })}
+                            <span className="flex items-center gap-1 text-[#00b4d8]">
+                              <Eye className="w-3.5 h-3.5 text-[#00b4d8]" />
+                              {metrics.views.toLocaleString()} views
                             </span>
-                          </>
-                        )}
-                      </div>
+                            <span>•</span>
+                            <span className="flex items-center gap-1 text-emerald-400">
+                              <Download className="w-3.5 h-3.5 text-emerald-400" />
+                              {metrics.downloads.toLocaleString()} downloads
+                            </span>
+                            {item.createdAt && (
+                              <>
+                                <span>•</span>
+                                <span className="text-gray-400">
+                                  {new Date(item.createdAt).toLocaleDateString("en-US", {
+                                    month: "short",
+                                    day: "numeric",
+                                    year: "numeric",
+                                  })}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </div>
 
                     {/* Actions: Edit & Delete */}

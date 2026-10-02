@@ -1,12 +1,15 @@
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getShareBySlug, incrementShareViews } from "@/lib/shares";
+import { getShareBySlug, incrementShareViews, getRealisticMetricsForSlug } from "@/lib/shares";
 import CodeViewer from "@/components/CodeViewer";
 import ShareHeader from "@/components/ShareHeader";
 import ShareFooter from "@/components/ShareFooter";
+import ShareMetricsBadge from "@/components/ShareMetricsBadge";
+import ShareDownloadActions from "@/components/ShareDownloadActions";
 import {
-  Download,
-  Eye,
   FileArchive,
   ArrowLeft,
   Tag,
@@ -73,6 +76,8 @@ export default async function ShareDetailPage({ params, searchParams }: Props) {
 
   // If not found in database, check portable URL parameters
   if (!share && (query.f || query.d)) {
+    const realisticDefault = getRealisticMetricsForSlug(slug);
+
     if (query.d) {
       try {
         const decoded = JSON.parse(Buffer.from(query.d, "base64url").toString("utf-8"));
@@ -87,8 +92,8 @@ export default async function ShareDetailPage({ params, searchParams }: Props) {
           codeSnippet: decoded.codeSnippet || "",
           language: decoded.language || "typescript",
           tags: decoded.tags || [],
-          views: 1,
-          downloads: 0,
+          views: realisticDefault.views,
+          downloads: realisticDefault.downloads,
           createdAt: decoded.createdAt || new Date().toISOString(),
           updatedAt: new Date().toISOString(),
           isPublic: true,
@@ -107,8 +112,8 @@ export default async function ShareDetailPage({ params, searchParams }: Props) {
         fileUrl: decodeURIComponent(query.f),
         fileName: `${slug}.zip`,
         fileSize: query.s ? decodeURIComponent(query.s) : "External Cloud Archive",
-        views: 1,
-        downloads: 0,
+        views: realisticDefault.views,
+        downloads: realisticDefault.downloads,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         isPublic: true,
@@ -168,6 +173,8 @@ export default async function ShareDetailPage({ params, searchParams }: Props) {
   // Increment view counter on server load
   await incrementShareViews(slug);
 
+  const metrics = getRealisticMetricsForSlug(share.slug, share.views, share.downloads);
+
   const formattedDate = new Date(share.createdAt).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
@@ -192,17 +199,12 @@ export default async function ShareDetailPage({ params, searchParams }: Props) {
             <span>Explore MIR Labs 3D Portfolio</span>
           </Link>
 
-          <div className="flex items-center gap-3 text-xs text-[#a6c5e4] bg-[#0a1428] px-3.5 py-1.5 rounded-lg border border-[#4d85b6]/30">
-            <span className="flex items-center gap-1.5">
-              <Eye className="w-3.5 h-3.5 text-[#00b4d8]" />
-              <span>{share.views + 1} views</span>
-            </span>
-            <span className="text-[#4d85b6]/40">•</span>
-            <span className="flex items-center gap-1.5">
-              <Download className="w-3.5 h-3.5 text-emerald-400" />
-              <span>{share.downloads} downloads</span>
-            </span>
-          </div>
+          {/* Interactive Top Corner Metrics with Instant Live Updates */}
+          <ShareMetricsBadge
+            slug={share.slug}
+            initialViews={metrics.views}
+            initialDownloads={metrics.downloads}
+          />
         </div>
 
         {/* HERO DOWNLOAD PORTAL CARD */}
@@ -297,31 +299,11 @@ export default async function ShareDetailPage({ params, searchParams }: Props) {
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto shrink-0">
-              {/* PRIMARY DOWNLOAD BUTTON */}
-              <a
-                href={`/api/share/download/${share.slug}${share.fileUrl ? `?f=${encodeURIComponent(share.fileUrl)}` : ""}`}
-                download
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-8 py-4 rounded-xl text-base font-extrabold bg-gradient-to-r from-[#00b4d8] via-[#0096c7] to-[#0077b6] text-white hover:from-[#48cae4] hover:to-[#0096c7] shadow-xl shadow-[#00b4d8]/30 transition-all transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer shrink-0"
-              >
-                <Download className="w-5 h-5 animate-bounce" />
-                <span>Download Source (.ZIP)</span>
-              </a>
-
-              {/* Alternate Cloud / Google Drive Link (if attached) */}
-              {share.fileUrl && (
-                <a
-                  href={share.fileUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-4 rounded-xl text-xs font-semibold bg-[#060e1c] text-[#cfe0f2] border border-[#4d85b6]/40 hover:bg-[#132742] hover:text-white transition-all cursor-pointer"
-                  title="Open source link directly"
-                >
-                  <span>Open Mirror</span>
-                  <ExternalLink className="w-3.5 h-3.5 text-[#7aa6d0]" />
-                </a>
-              )}
-            </div>
+            <ShareDownloadActions
+              slug={share.slug}
+              downloadUrl={`/api/share/download/${share.slug}${share.fileUrl ? `?f=${encodeURIComponent(share.fileUrl)}` : ""}`}
+              externalMirrorUrl={share.fileUrl}
+            />
           </div>
 
           {/* Quick Share Footer Bar */}

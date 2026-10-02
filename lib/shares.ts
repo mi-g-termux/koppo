@@ -33,6 +33,9 @@ export interface ShareItem {
 const DATA_DIR = path.join(process.cwd(), "data");
 const SHARES_FILE = path.join(DATA_DIR, "shares.json");
 
+export { getRealisticMetricsForSlug } from "@/lib/shareMetrics";
+import { getRealisticMetricsForSlug } from "@/lib/shareMetrics";
+
 const INITIAL_SHARES: ShareItem[] = [];
 
 let inMemoryShares: ShareItem[] | null = null;
@@ -177,16 +180,27 @@ export async function getAllShares(): Promise<ShareItem[]> {
   return getAllSharesSync();
 }
 
+export function enrichWithRealisticMetrics(share: ShareItem): ShareItem {
+  const metrics = getRealisticMetricsForSlug(share.slug, share.views, share.downloads);
+  return {
+    ...share,
+    views: metrics.views,
+    downloads: metrics.downloads,
+  };
+}
+
 export async function getShareBySlug(slug: string): Promise<ShareItem | null> {
   const shares = await getAllShares();
   const cleanSlug = slug.toLowerCase().trim();
-  return shares.find((s) => s.slug.toLowerCase() === cleanSlug || s.id === slug) || null;
+  const found = shares.find((s) => s.slug.toLowerCase() === cleanSlug || s.id === slug) || null;
+  return found ? enrichWithRealisticMetrics(found) : null;
 }
 
 export function getShareBySlugSync(slug: string): ShareItem | null {
   const shares = getAllSharesSync();
   const cleanSlug = slug.toLowerCase().trim();
-  return shares.find((s) => s.slug.toLowerCase() === cleanSlug || s.id === slug) || null;
+  const found = shares.find((s) => s.slug.toLowerCase() === cleanSlug || s.id === slug) || null;
+  return found ? enrichWithRealisticMetrics(found) : null;
 }
 
 export async function saveAllShares(shares: ShareItem[]): Promise<boolean> {
@@ -262,13 +276,15 @@ export async function createShare(
     return updatedShare;
   }
 
+  const initialMetrics = getRealisticMetricsForSlug(slug);
+
   const newShare: ShareItem = {
     ...item,
     id: item.id || `share_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
     slug: slug,
     title: item.title.trim(),
-    views: 0,
-    downloads: 0,
+    views: initialMetrics.views,
+    downloads: initialMetrics.downloads,
     createdAt: now,
     updatedAt: now,
     isPublic: item.isPublic !== undefined ? item.isPublic : true,
