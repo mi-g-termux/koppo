@@ -41,13 +41,6 @@ const INITIAL_SHARES: ShareItem[] = [];
 let inMemoryShares: ShareItem[] | null = null;
 const TMP_SHARES_FILE = "/tmp/shares.json";
 
-function getActiveFilePath(): string {
-  if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
-    return TMP_SHARES_FILE;
-  }
-  return SHARES_FILE;
-}
-
 function ensureDataFile(): void {
   try {
     if (!fs.existsSync(DATA_DIR)) {
