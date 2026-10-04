@@ -87,6 +87,8 @@ export default function AdminPage() {
 
   const [submitting, setSubmitting] = useState(false);
   const [successShareUrl, setSuccessShareUrl] = useState<string | null>(null);
+  const [portableSuccessUrl, setPortableSuccessUrl] = useState<string | null>(null);
+  const [showExportModal, setShowExportModal] = useState(false);
   const [copiedTarget, setCopiedTarget] = useState<string | null>(null);
 
   // Edit Modal State
@@ -360,8 +362,15 @@ export default function AdminPage() {
       if (!data.success) {
         alert("Error: " + data.error);
       } else {
-        const fullUrl = `${window.location.origin}${data.shareUrl}`;
-        setSuccessShareUrl(fullUrl);
+        const shortUrl = `${window.location.origin}${data.shareUrl}`;
+        setSuccessShareUrl(shortUrl);
+        if (finalFileUrl) {
+          let pUrl = `${shortUrl}?f=${encodeURIComponent(finalFileUrl)}&t=${encodeURIComponent(title)}`;
+          if (finalFileSize) pUrl += `&s=${encodeURIComponent(finalFileSize)}`;
+          setPortableSuccessUrl(pUrl);
+        } else {
+          setPortableSuccessUrl(null);
+        }
 
         // Store new share locally so it ALWAYS shows in admin panel
         if (data.share) {
@@ -553,6 +562,7 @@ export default function AdminPage() {
   const handleExportJson = () => {
     const jsonStr = JSON.stringify(shares, null, 2);
     copyToClipboard(jsonStr, "export_json");
+    setShowExportModal(true);
 
     try {
       const blob = new Blob([jsonStr], { type: "application/json" });
@@ -685,35 +695,81 @@ export default function AdminPage() {
 
         {/* Success Banner */}
         {successShareUrl && (
-          <div className="mb-8 p-6 rounded-3xl bg-gradient-to-r from-emerald-950/80 to-[#0a1428] border border-emerald-500/50 shadow-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2 text-emerald-400 text-sm font-bold">
-                <Check className="w-5 h-5" />
-                <span>Link Generated! Send this to your user:</span>
+          <div className="mb-8 p-6 rounded-3xl bg-gradient-to-r from-emerald-950/80 to-[#0a1428] border border-emerald-500/50 shadow-2xl space-y-4">
+            <div className="flex items-center gap-2 text-emerald-400 text-sm font-bold">
+              <Check className="w-5 h-5" />
+              <span>Link Created! Choose how you want to share:</span>
+            </div>
+
+            {/* Short URL Box */}
+            <div className="p-4 rounded-2xl bg-[#060e1c] border border-[#00b4d8]/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-white">Clean Short Link</span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#00b4d8]/20 text-[#00b4d8] border border-[#00b4d8]/30">
+                    Recommended (Instagram / DM)
+                  </span>
+                </div>
+                <p className="text-xs text-[#00b4d8] font-mono break-all font-semibold mt-1">
+                  {successShareUrl}
+                </p>
               </div>
-              <p className="text-xs text-white mt-1 font-mono break-all font-semibold">
-                {successShareUrl}
-              </p>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => copyToClipboard(successShareUrl, "banner_short")}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-[#00b4d8] text-black hover:bg-[#48cae4] transition-all cursor-pointer shadow-lg"
+                >
+                  {copiedTarget === "banner_short" ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copiedTarget === "banner_short" ? "Copied!" : "Copy Short Link"}</span>
+                </button>
+                <Link
+                  href={successShareUrl}
+                  target="_blank"
+                  className="p-2 rounded-xl bg-[#0a1428] text-gray-300 hover:text-white border border-[#4d85b6]/30 transition-all"
+                  title="Test Short Link"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </Link>
+              </div>
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
-              <button
-                onClick={() => copyToClipboard(successShareUrl, "banner")}
-                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold bg-emerald-500 text-black hover:bg-emerald-400 transition-all cursor-pointer shadow-lg"
-              >
-                {copiedTarget === "banner" ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{copiedTarget === "banner" ? "Copied!" : "Copy Link for Users"}</span>
-              </button>
+            {/* Portable Long URL Box */}
+            {portableSuccessUrl && (
+              <div className="p-4 rounded-2xl bg-[#060e1c] border border-purple-500/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-white">Portable Long URL</span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                      Guaranteed Backup (Works with Zero Database)
+                    </span>
+                  </div>
+                  <p className="text-xs text-purple-300 font-mono break-all mt-1">
+                    {portableSuccessUrl}
+                  </p>
+                </div>
 
-              <Link
-                href={successShareUrl}
-                target="_blank"
-                className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-[#050b16] text-white hover:bg-[#131f3a] border border-[#4d85b6]/30 transition-all"
-              >
-                <ExternalLink className="w-3.5 h-3.5" />
-                <span>Test Link</span>
-              </Link>
-            </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => copyToClipboard(portableSuccessUrl, "banner_portable")}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-purple-600 text-white hover:bg-purple-500 transition-all cursor-pointer shadow-lg"
+                  >
+                    {copiedTarget === "banner_portable" ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span>{copiedTarget === "banner_portable" ? "Copied!" : "Copy Long URL"}</span>
+                  </button>
+                  <Link
+                    href={portableSuccessUrl}
+                    target="_blank"
+                    className="p-2 rounded-xl bg-[#0a1428] text-gray-300 hover:text-white border border-[#4d85b6]/30 transition-all"
+                    title="Test Portable Long URL"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -1071,14 +1127,19 @@ export default function AdminPage() {
                     )}
                   </div>
 
-                  {/* Middle Row 2: Public Share Page URL */}
+                  {/* Middle Row 2: Clean Short URL */}
                   <div className="p-3.5 rounded-xl bg-[#071120] border border-[#00b4d8]/25 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="flex items-start sm:items-center gap-2.5 min-w-0 flex-1">
                       <LinkIcon className="w-4 h-4 text-[#00b4d8] shrink-0 mt-0.5 sm:mt-0" />
                       <div className="min-w-0 flex-1">
-                        <span className="text-[11px] font-semibold text-[#a6c5e4]">
-                          Public Link for Users (Instagram / DM):
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] font-semibold text-[#a6c5e4]">
+                            Clean Short Link (Instagram / DM):
+                          </span>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#00b4d8]/15 text-[#00b4d8] border border-[#00b4d8]/30">
+                            Recommended
+                          </span>
+                        </div>
                         <p className="text-xs text-[#00b4d8] font-mono font-semibold truncate mt-0.5">
                           {typeof window !== "undefined" ? window.location.origin : ""}/share/{item.slug}
                         </p>
@@ -1090,11 +1151,11 @@ export default function AdminPage() {
                         type="button"
                         onClick={() => {
                           const url = `${window.location.origin}/share/${item.slug}`;
-                          copyToClipboard(url, `share_${item.slug}`);
+                          copyToClipboard(url, `short_${item.slug}`);
                         }}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#00b4d8]/20 text-[#00b4d8] hover:bg-[#00b4d8]/30 border border-[#00b4d8]/40 transition-all cursor-pointer"
                       >
-                        {copiedTarget === `share_${item.slug}` ? (
+                        {copiedTarget === `short_${item.slug}` ? (
                           <>
                             <Check className="w-3.5 h-3.5 text-emerald-400" />
                             <span className="text-emerald-400">Copied!</span>
@@ -1102,7 +1163,7 @@ export default function AdminPage() {
                         ) : (
                           <>
                             <Copy className="w-3.5 h-3.5" />
-                            <span>Copy Link for Users</span>
+                            <span>Copy Short Link</span>
                           </>
                         )}
                       </button>
@@ -1112,12 +1173,68 @@ export default function AdminPage() {
                         target="_blank"
                         rel="noopener noreferrer"
                         className="p-1.5 rounded-lg bg-[#050b16] text-gray-300 hover:text-white border border-[#4d85b6]/30 transition-all"
-                        title="Test Public Download Page"
+                        title="Test Clean Short Link"
                       >
                         <ExternalLink className="w-3.5 h-3.5" />
                       </a>
                     </div>
                   </div>
+
+                  {/* Middle Row 3: Portable Long URL (Guaranteed Universal Backup) */}
+                  {item.fileUrl && (
+                    <div className="p-3.5 rounded-xl bg-[#080d1a] border border-purple-500/25 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-start sm:items-center gap-2.5 min-w-0 flex-1">
+                        <LinkIcon className="w-4 h-4 text-purple-400 shrink-0 mt-0.5 sm:mt-0" />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[11px] font-semibold text-[#a6c5e4]">
+                              Portable Long Link:
+                            </span>
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-purple-500/15 text-purple-300 border border-purple-500/30">
+                              Universal Backup (Zero Database Required)
+                            </span>
+                          </div>
+                          <p className="text-xs text-purple-300 font-mono truncate mt-0.5">
+                            {typeof window !== "undefined" ? window.location.origin : ""}/share/{item.slug}?f={encodeURIComponent(item.fileUrl)}&t={encodeURIComponent(item.title)}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            let url = `${window.location.origin}/share/${item.slug}?f=${encodeURIComponent(item.fileUrl!)}&t=${encodeURIComponent(item.title)}`;
+                            if (item.fileSize) url += `&s=${encodeURIComponent(item.fileSize)}`;
+                            copyToClipboard(url, `portable_${item.slug}`);
+                          }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-purple-500/15 text-purple-300 hover:bg-purple-500/25 border border-purple-500/30 transition-all cursor-pointer"
+                        >
+                          {copiedTarget === `portable_${item.slug}` ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 text-emerald-400" />
+                              <span className="text-emerald-400">Copied!</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3.5 h-3.5" />
+                              <span>Copy Long Link</span>
+                            </>
+                          )}
+                        </button>
+
+                        <a
+                          href={`/share/${item.slug}?f=${encodeURIComponent(item.fileUrl)}&t=${encodeURIComponent(item.title)}${item.fileSize ? `&s=${encodeURIComponent(item.fileSize)}` : ""}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-1.5 rounded-lg bg-[#050b16] text-gray-300 hover:text-white border border-[#4d85b6]/30 transition-all"
+                          title="Test Portable Long Link"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -1294,6 +1411,74 @@ export default function AdminPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* 📦 EXPORT & SYNC MODAL */}
+      {showExportModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="max-w-3xl w-full my-8 bg-[#0a1428] border border-[#4d85b6]/40 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
+            <div className="flex items-center justify-between pb-4 border-b border-[#4d85b6]/20">
+              <div className="flex items-center gap-2">
+                <FolderOpen className="w-5 h-5 text-[#00b4d8]" />
+                <h2 className="text-lg font-bold text-white">Your Saved Files & Links JSON ({shares.length} items)</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowExportModal(false)}
+                className="p-2 rounded-xl text-gray-400 hover:text-white hover:bg-[#050b16] transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-[#060e1c] border border-[#00b4d8]/30 space-y-2 text-xs">
+              <p className="font-bold text-white flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-[#00b4d8]" />
+                <span>How to make all {shares.length} files work with clean short URLs permanently:</span>
+              </p>
+              <p className="text-[#a6c5e4] leading-relaxed">
+                1. Click <strong>&quot;Copy All Files JSON&quot;</strong> below.<br />
+                2. Paste it into <code className="px-1.5 py-0.5 rounded bg-[#0a1428] text-[#00b4d8] font-mono">data/shares.json</code> in your project repository.<br />
+                3. Push to GitHub (<code className="px-1.5 py-0.5 rounded bg-[#0a1428] text-emerald-300 font-mono">git push</code>). Every single file will instantly work with its clean short URL for everyone worldwide!
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-[#cfe0f2]">Full Database JSON:</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(JSON.stringify(shares, null, 2));
+                    setCopiedTarget("modal_json");
+                    setTimeout(() => setCopiedTarget(null), 2000);
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#00b4d8] text-black hover:bg-[#48cae4] transition-all cursor-pointer shadow-md"
+                >
+                  {copiedTarget === "modal_json" ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copiedTarget === "modal_json" ? "Copied All JSON!" : "Copy All Files JSON"}</span>
+                </button>
+              </div>
+
+              <textarea
+                readOnly
+                rows={12}
+                value={JSON.stringify(shares, null, 2)}
+                className="w-full p-4 rounded-xl bg-[#050b16] border border-[#4d85b6]/30 font-mono text-xs text-emerald-300 focus:outline-none"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#4d85b6]/20">
+              <button
+                type="button"
+                onClick={() => setShowExportModal(false)}
+                className="px-6 py-2.5 rounded-xl text-xs font-bold bg-[#7aa6d0] hover:bg-[#a6c5e4] text-[#050b16] shadow-lg transition-all cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
