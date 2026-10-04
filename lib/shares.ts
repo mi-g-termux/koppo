@@ -119,39 +119,61 @@ async function saveSharesToKV(shares: ShareItem[]): Promise<boolean> {
   }
 }
 
-export function getAllSharesSync(): ShareItem[] {
-  if (inMemoryShares !== null) {
-    return inMemoryShares;
-  }
-
+export function getBundledShares(): ShareItem[] {
   try {
-    ensureDataFile();
-    const filePath = fs.existsSync(SHARES_FILE)
-      ? SHARES_FILE
-      : fs.existsSync(TMP_SHARES_FILE)
-      ? TMP_SHARES_FILE
-      : null;
-    if (filePath) {
-      const data = fs.readFileSync(filePath, "utf8");
-      inMemoryShares = JSON.parse(data) as ShareItem[];
-      return inMemoryShares;
+    if (fs.existsSync(SHARES_FILE)) {
+      const data = fs.readFileSync(SHARES_FILE, "utf8");
+      const parsed = JSON.parse(data) as ShareItem[];
+      if (Array.isArray(parsed)) return parsed;
     }
   } catch (err) {
-    console.error("Error reading shares store:", err);
+    console.warn("Could not read bundled shares:", err);
+  }
+  return [];
+}
+
+export function getAllSharesSync(): ShareItem[] {
+  const bundled = getBundledShares();
+  let tmpList: ShareItem[] = [];
+
+  try {
+    if (fs.existsSync(TMP_SHARES_FILE)) {
+      const data = fs.readFileSync(TMP_SHARES_FILE, "utf8");
+      const parsed = JSON.parse(data) as ShareItem[];
+      if (Array.isArray(parsed)) tmpList = parsed;
+    }
+  } catch {
+    // Ignore tmp read errors
   }
 
-  inMemoryShares = [...INITIAL_SHARES];
-  return inMemoryShares;
+  const map = new Map<string, ShareItem>();
+  for (const b of bundled) {
+    if (b && b.slug) map.set(b.slug.toLowerCase(), b);
+  }
+  for (const t of tmpList) {
+    if (t && t.slug) map.set(t.slug.toLowerCase(), t);
+  }
+  if (inMemoryShares) {
+    for (const m of inMemoryShares) {
+      if (m && m.slug) map.set(m.slug.toLowerCase(), m);
+    }
+  }
+
+  const merged = Array.from(map.values());
+  inMemoryShares = merged;
+  return merged;
 }
 
 export async function getAllShares(): Promise<ShareItem[]> {
+  const bundled = getBundledShares();
+  let remoteShares: ShareItem[] | null = null;
+
   // 1. Try Vercel KV / Upstash Redis if configured
   if (isKVConfigured()) {
     try {
       const kvShares = await loadSharesFromKV();
       if (kvShares && Array.isArray(kvShares)) {
-        inMemoryShares = kvShares;
-        return inMemoryShares;
+        remoteShares = kvShares;
       }
     } catch (err) {
       console.warn("Could not read shares from KV:", err);
@@ -159,25 +181,54 @@ export async function getAllShares(): Promise<ShareItem[]> {
   }
 
   // 2. Try Cloudflare R2 if configured
-  if (isR2Configured()) {
+  if (!remoteShares && isR2Configured()) {
     try {
       const r2Shares = await loadSharesFromR2();
       if (r2Shares && Array.isArray(r2Shares)) {
-        inMemoryShares = r2Shares as ShareItem[];
-        return inMemoryShares;
+        remoteShares = r2Shares as ShareItem[];
       }
     } catch (err) {
       console.warn("Could not read shares from R2, falling back to local:", err);
     }
   }
 
-  // 3. Return cached in-memory if available
-  if (inMemoryShares !== null) {
-    return inMemoryShares;
+  // 3. Fallback to /tmp or in-memory
+  let tmpList: ShareItem[] = [];
+  try {
+    if (fs.existsSync(TMP_SHARES_FILE)) {
+      const data = fs.readFileSync(TMP_SHARES_FILE, "utf8");
+      const parsed = JSON.parse(data) as ShareItem[];
+      if (Array.isArray(parsed)) tmpList = parsed;
+    }
+  } catch {
+    // Ignore tmp read errors
   }
 
-  // 4. Fall back to local file / /tmp / initial
-  return getAllSharesSync();
+  const map = new Map<string, ShareItem>();
+  // 1. Bundled base shares (committed in git / data/shares.json)
+  for (const b of bundled) {
+    if (b && b.slug) map.set(b.slug.toLowerCase(), b);
+  }
+  // 2. Tmp shares
+  for (const t of tmpList) {
+    if (t && t.slug) map.set(t.slug.toLowerCase(), t);
+  }
+  // 3. In-memory
+  if (inMemoryShares) {
+    for (const m of inMemoryShares) {
+      if (m && m.slug) map.set(m.slug.toLowerCase(), m);
+    }
+  }
+  // 4. Remote KV/R2 overrides
+  if (remoteShares) {
+    for (const r of remoteShares) {
+      if (r && r.slug) map.set(r.slug.toLowerCase(), r);
+    }
+  }
+
+  const merged = Array.from(map.values());
+  inMemoryShares = merged;
+  return merged;
 }
 
 export function enrichWithRealisticMetrics(share: ShareItem): ShareItem {
@@ -206,20 +257,22 @@ export function getShareBySlugSync(slug: string): ShareItem | null {
 export async function saveAllShares(shares: ShareItem[]): Promise<boolean> {
   inMemoryShares = shares;
 
-  // 1. Save to local disk / /tmp
+  // 1. Save to local disk /data/shares.json if possible
   try {
     ensureDataFile();
-    const targetPath = getActiveFilePath();
-    fs.writeFileSync(targetPath, JSON.stringify(shares, null, 2), "utf8");
+    fs.writeFileSync(SHARES_FILE, JSON.stringify(shares, null, 2), "utf8");
   } catch {
-    try {
-      fs.writeFileSync(TMP_SHARES_FILE, JSON.stringify(shares, null, 2), "utf8");
-    } catch {
-      // Memory fallback
-    }
+    // Read-only filesystem on Vercel
   }
 
-  // 2. Save to Vercel KV / Upstash Redis if configured
+  // 2. Save to TMP_SHARES_FILE
+  try {
+    fs.writeFileSync(TMP_SHARES_FILE, JSON.stringify(shares, null, 2), "utf8");
+  } catch {
+    // Memory fallback
+  }
+
+  // 3. Save to Vercel KV / Upstash Redis if configured
   if (isKVConfigured()) {
     try {
       await saveSharesToKV(shares);
@@ -228,7 +281,7 @@ export async function saveAllShares(shares: ShareItem[]): Promise<boolean> {
     }
   }
 
-  // 3. Save to Cloudflare R2 if configured
+  // 4. Save to Cloudflare R2 if configured
   if (isR2Configured()) {
     try {
       await saveSharesToR2(shares);

@@ -12,7 +12,7 @@ export default function CopyShareLinkButton({ slug, title }: CopyShareLinkButton
   const [copied, setCopied] = useState(false);
 
   const handleShare = async () => {
-    const url = typeof window !== "undefined" ? window.location.href : `/share/${slug}`;
+    const url = typeof window !== "undefined" ? `${window.location.origin}/share/${slug}` : `/share/${slug}`;
 
     if (navigator.share) {
       try {

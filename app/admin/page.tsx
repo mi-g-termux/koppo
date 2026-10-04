@@ -360,11 +360,7 @@ export default function AdminPage() {
       if (!data.success) {
         alert("Error: " + data.error);
       } else {
-        let fullUrl = `${window.location.origin}${data.shareUrl}`;
-        if (finalFileUrl && !databaseConfigured) {
-          fullUrl += `?f=${encodeURIComponent(finalFileUrl)}&t=${encodeURIComponent(title)}`;
-          if (finalFileSize) fullUrl += `&s=${encodeURIComponent(finalFileSize)}`;
-        }
+        const fullUrl = `${window.location.origin}${data.shareUrl}`;
         setSuccessShareUrl(fullUrl);
 
         // Store new share locally so it ALWAYS shows in admin panel
@@ -554,6 +550,25 @@ export default function AdminPage() {
     setTimeout(() => setCopiedTarget(null), 2000);
   };
 
+  const handleExportJson = () => {
+    const jsonStr = JSON.stringify(shares, null, 2);
+    copyToClipboard(jsonStr, "export_json");
+
+    try {
+      const blob = new Blob([jsonStr], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "shares.json";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.warn("Could not auto-download shares.json:", e);
+    }
+  };
+
   // 🔒 Lock Screen
   if (!isAuthenticated) {
     return (
@@ -630,14 +645,25 @@ export default function AdminPage() {
             </p>
           </div>
 
-          <button
-            onClick={fetchShares}
-            disabled={loadingShares}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-[#0a1428] hover:bg-[#131f3a] text-[#cfe0f2] border border-[#4d85b6]/30 transition-all cursor-pointer"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loadingShares ? "animate-spin" : ""}`} />
-            <span>Refresh ({shares.length} active links)</span>
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={handleExportJson}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 transition-all cursor-pointer shadow-sm"
+              title="Export all shares to shares.json and copy to clipboard"
+            >
+              {copiedTarget === "export_json" ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Download className="w-3.5 h-3.5 text-emerald-400" />}
+              <span>{copiedTarget === "export_json" ? "JSON Copied & Downloaded!" : "Export shares.json"}</span>
+            </button>
+
+            <button
+              onClick={fetchShares}
+              disabled={loadingShares}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-[#0a1428] hover:bg-[#131f3a] text-[#cfe0f2] border border-[#4d85b6]/30 transition-all cursor-pointer"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loadingShares ? "animate-spin" : ""}`} />
+              <span>Refresh ({shares.length} active links)</span>
+            </button>
+          </div>
         </div>
 
         {/* Storage Mode Status Notice */}
@@ -646,14 +672,14 @@ export default function AdminPage() {
             <span className={`w-2.5 h-2.5 rounded-full ${databaseConfigured ? "bg-emerald-400 animate-pulse" : "bg-[#00b4d8]"}`} />
             <span className="font-bold text-white">
               {databaseConfigured
-                ? "Persistent Database Active (Cloudflare R2 / Vercel KV)"
-                : "Active Storage Engine (Direct Links + Portable URLs)"}
+                ? "Persistent Database Active (Cloudflare R2 / Upstash Redis / Vercel KV)"
+                : "Clean Short URLs Active (Pre-bundled in data/shares.json)"}
             </span>
           </div>
           <span className="text-[#a6c5e4]">
             {databaseConfigured
-              ? "All created links are permanently stored and accessible via clean short URLs."
-              : "All created links are saved locally and synced to server. Google Drive links work 100% worldwide!"}
+              ? "All created links are permanently stored and accessible via clean short URLs worldwide."
+              : "Links in data/shares.json work worldwide. To auto-sync newly created links without git push, connect Free Upstash Redis in Vercel Storage!"}
           </span>
         </div>
 
@@ -1063,11 +1089,7 @@ export default function AdminPage() {
                       <button
                         type="button"
                         onClick={() => {
-                          let url = `${window.location.origin}/share/${item.slug}`;
-                          if (item.fileUrl && !databaseConfigured) {
-                            url += `?f=${encodeURIComponent(item.fileUrl)}&t=${encodeURIComponent(item.title)}`;
-                            if (item.fileSize) url += `&s=${encodeURIComponent(item.fileSize)}`;
-                          }
+                          const url = `${window.location.origin}/share/${item.slug}`;
                           copyToClipboard(url, `share_${item.slug}`);
                         }}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#00b4d8]/20 text-[#00b4d8] hover:bg-[#00b4d8]/30 border border-[#00b4d8]/40 transition-all cursor-pointer"
@@ -1086,11 +1108,7 @@ export default function AdminPage() {
                       </button>
 
                       <a
-                        href={
-                          item.fileUrl && !databaseConfigured
-                            ? `/share/${item.slug}?f=${encodeURIComponent(item.fileUrl)}&t=${encodeURIComponent(item.title)}${item.fileSize ? `&s=${encodeURIComponent(item.fileSize)}` : ""}`
-                            : `/share/${item.slug}`
-                        }
+                        href={`/share/${item.slug}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="p-1.5 rounded-lg bg-[#050b16] text-gray-300 hover:text-white border border-[#4d85b6]/30 transition-all"
