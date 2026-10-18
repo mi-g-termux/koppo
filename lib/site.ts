@@ -24,7 +24,12 @@ export function getRawSiteUrl(): string {
     return window.location.origin;
   }
 
-  // 5. Default local development origin
+  // 5. Production default domain fallback
+  if (process.env.NODE_ENV === "production") {
+    return "https://mirlabs.cyou";
+  }
+
+  // 6. Default local development origin
   return "http://localhost:3000";
 }
 
