@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
-import { isR2Configured, loadSharesFromR2, saveSharesToR2 } from "@/lib/r2";
+import os from "os";
+import { isR2Configured, loadSharesFromR2, saveSharesToR2 } from "./r2";
 
 export interface CodeSnippet {
   title?: string;
@@ -33,13 +34,27 @@ export interface ShareItem {
 const DATA_DIR = path.join(process.cwd(), "data");
 const SHARES_FILE = path.join(DATA_DIR, "shares.json");
 
-export { getRealisticMetricsForSlug } from "@/lib/shareMetrics";
-import { getRealisticMetricsForSlug } from "@/lib/shareMetrics";
+export { getRealisticMetricsForSlug } from "./shareMetrics";
+import { getRealisticMetricsForSlug } from "./shareMetrics";
 
 const INITIAL_SHARES: ShareItem[] = [];
 
 let inMemoryShares: ShareItem[] | null = null;
-const TMP_SHARES_FILE = "/tmp/shares.json";
+const TMP_SHARES_FILE = path.join(os.tmpdir(), "mirlabs_shares.json");
+
+export function normalizeSlug(slug: string): string {
+  if (!slug) return "";
+  try {
+    slug = decodeURIComponent(slug);
+  } catch {
+    // Keep raw slug if decoding fails
+  }
+  return slug
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9_-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
 
 function ensureDataFile(): void {
   try {
@@ -234,16 +249,18 @@ export function enrichWithRealisticMetrics(share: ShareItem): ShareItem {
 }
 
 export async function getShareBySlug(slug: string): Promise<ShareItem | null> {
+  if (!slug) return null;
   const shares = await getAllShares();
-  const cleanSlug = slug.toLowerCase().trim();
-  const found = shares.find((s) => s.slug.toLowerCase() === cleanSlug || s.id === slug) || null;
+  const cleanSlug = normalizeSlug(slug);
+  const found = shares.find((s) => normalizeSlug(s.slug) === cleanSlug || s.id === slug) || null;
   return found ? enrichWithRealisticMetrics(found) : null;
 }
 
 export function getShareBySlugSync(slug: string): ShareItem | null {
+  if (!slug) return null;
   const shares = getAllSharesSync();
-  const cleanSlug = slug.toLowerCase().trim();
-  const found = shares.find((s) => s.slug.toLowerCase() === cleanSlug || s.id === slug) || null;
+  const cleanSlug = normalizeSlug(slug);
+  const found = shares.find((s) => normalizeSlug(s.slug) === cleanSlug || s.id === slug) || null;
   return found ? enrichWithRealisticMetrics(found) : null;
 }
 
@@ -293,21 +310,19 @@ export async function createShare(
 ): Promise<ShareItem> {
   const shares = await getAllShares();
 
-  // Create clean slug
-  let slug = (item.slug || item.title)
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+  // Create clean, normalized slug
+  let slug = normalizeSlug(item.slug || item.title);
 
   if (!slug) {
     slug = `share-${Date.now()}`;
   }
 
-  // If this slug already exists, UPDATE the existing share instead of creating a duplicate
-  const existingIndex = shares.findIndex((s) => s.slug === slug);
+  // Check for existing slug
+  const existingIndex = shares.findIndex((s) => normalizeSlug(s.slug) === slug);
   const now = new Date().toISOString();
 
-  if (existingIndex !== -1) {
+  // If this record has matching ID or explicitly targets the same slug, update it
+  if (existingIndex !== -1 && (!item.id || shares[existingIndex].id === item.id)) {
     const updatedShare: ShareItem = {
       ...shares[existingIndex],
       ...item,
@@ -320,6 +335,9 @@ export async function createShare(
     shares[existingIndex] = updatedShare;
     await saveAllShares(shares);
     return updatedShare;
+  } else if (existingIndex !== -1) {
+    // Collision with a different existing share: append unique suffix
+    slug = `${slug}-${Math.random().toString(36).substring(2, 6)}`;
   }
 
   const initialMetrics = getRealisticMetricsForSlug(slug);
@@ -345,16 +363,13 @@ export async function createShare(
 
 export async function updateShare(slug: string, updates: Partial<ShareItem>): Promise<ShareItem | null> {
   const shares = await getAllShares();
-  const cleanSlug = slug.toLowerCase().trim();
-  const index = shares.findIndex((s) => s.slug.toLowerCase() === cleanSlug || s.id === slug);
+  const cleanSlug = normalizeSlug(slug);
+  const index = shares.findIndex((s) => normalizeSlug(s.slug) === cleanSlug || s.id === slug);
   if (index === -1) return null;
 
   let newSlug = shares[index].slug;
   if (updates.slug && updates.slug.trim()) {
-    newSlug = updates.slug
-      .toLowerCase()
-      .replace(/[^a-z0-9_-]+/g, "-")
-      .replace(/^-+|-+$/g, "");
+    newSlug = normalizeSlug(updates.slug);
   }
 
   const updated: ShareItem = {

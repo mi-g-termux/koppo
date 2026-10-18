@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getShareBySlug, deleteShare, incrementShareViews, updateShare } from "@/lib/shares";
+import { getShareBySlug, deleteShare, updateShare, normalizeSlug } from "@/lib/shares";
 import { deleteR2File } from "@/lib/r2";
 
 function verifyAdmin(request: NextRequest, bodyKey?: string): boolean {
@@ -13,7 +13,8 @@ export async function GET(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    const { slug } = await params;
+    const { slug: rawSlug } = await params;
+    const slug = normalizeSlug(rawSlug);
     const share = await getShareBySlug(slug);
 
     if (!share) {
@@ -23,16 +24,17 @@ export async function GET(
       );
     }
 
-    // Check query param or header to avoid counting admin preview as visitor view
-    const noTrack = request.nextUrl.searchParams.get("notrack") === "1";
-    if (!noTrack) {
-      await incrementShareViews(slug);
-    }
-
-    return NextResponse.json({
-      success: true,
-      share,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        share,
+      },
+      {
+        headers: {
+          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+        },
+      }
+    );
   } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : "Failed to fetch share";
     console.error("API GET /api/share/[slug] error:", err);

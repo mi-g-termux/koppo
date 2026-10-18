@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import type { ShareItem } from "@/lib/shares";
 import { getRealisticMetricsForSlug } from "@/lib/shareMetrics";
+import { getCanonicalUrl } from "@/lib/site";
 
 const LANGUAGES = [
   { label: "TypeScript (.ts)", value: "typescript" },
@@ -362,7 +363,7 @@ export default function AdminPage() {
       if (!data.success) {
         alert("Error: " + data.error);
       } else {
-        const shortUrl = `${window.location.origin}${data.shareUrl}`;
+        const shortUrl = getCanonicalUrl(data.shareUrl);
         setSuccessShareUrl(shortUrl);
         if (finalFileUrl) {
           let pUrl = `${shortUrl}?f=${encodeURIComponent(finalFileUrl)}&t=${encodeURIComponent(title)}`;
@@ -1141,7 +1142,7 @@ export default function AdminPage() {
                           </span>
                         </div>
                         <p className="text-xs text-[#00b4d8] font-mono font-semibold truncate mt-0.5">
-                          {typeof window !== "undefined" ? window.location.origin : ""}/share/{item.slug}
+                          {getCanonicalUrl(`/share/${item.slug}`)}
                         </p>
                       </div>
                     </div>
@@ -1150,7 +1151,7 @@ export default function AdminPage() {
                       <button
                         type="button"
                         onClick={() => {
-                          const url = `${window.location.origin}/share/${item.slug}`;
+                          const url = getCanonicalUrl(`/share/${item.slug}`);
                           copyToClipboard(url, `short_${item.slug}`);
                         }}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#00b4d8]/20 text-[#00b4d8] hover:bg-[#00b4d8]/30 border border-[#00b4d8]/40 transition-all cursor-pointer"
@@ -1195,7 +1196,7 @@ export default function AdminPage() {
                             </span>
                           </div>
                           <p className="text-xs text-purple-300 font-mono truncate mt-0.5">
-                            {typeof window !== "undefined" ? window.location.origin : ""}/share/{item.slug}?f={encodeURIComponent(item.fileUrl)}&t={encodeURIComponent(item.title)}
+                            {getCanonicalUrl(`/share/${item.slug}`)}?f={encodeURIComponent(item.fileUrl)}&t={encodeURIComponent(item.title)}
                           </p>
                         </div>
                       </div>
@@ -1204,7 +1205,7 @@ export default function AdminPage() {
                         <button
                           type="button"
                           onClick={() => {
-                            let url = `${window.location.origin}/share/${item.slug}?f=${encodeURIComponent(item.fileUrl!)}&t=${encodeURIComponent(item.title)}`;
+                            let url = `${getCanonicalUrl(`/share/${item.slug}`)}?f=${encodeURIComponent(item.fileUrl!)}&t=${encodeURIComponent(item.title)}`;
                             if (item.fileSize) url += `&s=${encodeURIComponent(item.fileSize)}`;
                             copyToClipboard(url, `portable_${item.slug}`);
                           }}

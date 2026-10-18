@@ -3,7 +3,9 @@ export const revalidate = 0;
 
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getShareBySlug, incrementShareViews, getRealisticMetricsForSlug } from "@/lib/shares";
+import { notFound } from "next/navigation";
+import { getShareBySlug, getRealisticMetricsForSlug, normalizeSlug } from "@/lib/shares";
+import { getCanonicalUrl } from "@/lib/site";
 import CodeViewer from "@/components/CodeViewer";
 import ShareHeader from "@/components/ShareHeader";
 import ShareFooter from "@/components/ShareFooter";
@@ -18,7 +20,7 @@ import {
   ExternalLink,
   HardDrive,
   CheckCircle2,
-  AlertCircle,
+  FolderOpen,
 } from "lucide-react";
 import CopyShareLinkButton from "@/components/CopyShareLinkButton";
 
@@ -28,49 +30,78 @@ interface Props {
 }
 
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
-  const { slug } = await params;
+  const { slug: rawSlug } = await params;
+  const slug = normalizeSlug(rawSlug);
   const query = searchParams ? await searchParams : {};
   const share = await getShareBySlug(slug);
 
-  if (!share && query.t) {
+  if (!share && (query.t || query.f || query.d)) {
+    const rawTitle = query.t ? decodeURIComponent(query.t) : `${slug.replace(/-/g, " ")} — Code Download`;
     return {
-      title: `${decodeURIComponent(query.t)} — MIR Labs Code Download`,
-      description: "Download and explore source code shared by MIR Labs.",
+      title: `${rawTitle} | MIR Labs Code Vault`,
+      description: query.desc ? decodeURIComponent(query.desc) : "Direct download package shared by MIR Labs.",
+      robots: { index: false, follow: false },
     };
   }
 
   if (!share) {
     return {
-      title: "Download Not Found — MIR Labs",
+      title: "Resource Not Found — MIR Labs",
       description: "The requested code snippet or download could not be found.",
+      robots: { index: false, follow: false },
     };
   }
 
-  const title = `${share.title} — MIR Labs Code Download`;
+  const title = `${share.title} — Free Source Code Download | MIR Labs`;
   const description =
     share.description ||
-    `Download and explore source code for ${share.title}, shared by MIR Labs.`;
+    `Download and explore source code for ${share.title}, shared by MIR Labs. Free, clean and production-ready.`;
+  const canonical = getCanonicalUrl(`/share/${share.slug}`);
 
   return {
     title,
     description,
+    alternates: {
+      canonical,
+    },
+    robots: {
+      index: true,
+      follow: true,
+      "max-snippet": -1,
+      "max-image-preview": "large",
+      "max-video-preview": -1,
+    },
     openGraph: {
-      title: `📦 ${share.title}`,
+      title: `📦 ${share.title} — MIR Labs`,
       description,
+      url: canonical,
       type: "article",
       locale: "en_US",
-      siteName: "MIR Labs 3D Portfolio",
+      siteName: "MIR Labs",
+      publishedTime: share.createdAt,
+      modifiedTime: share.updatedAt,
+      tags: share.tags,
+      images: [
+        {
+          url: getCanonicalUrl("/logo-mir-labs.png"),
+          width: 1200,
+          height: 630,
+          alt: share.title,
+        },
+      ],
     },
     twitter: {
       card: "summary_large_image",
       title: `📦 ${share.title}`,
       description,
+      images: [getCanonicalUrl("/logo-mir-labs.png")],
     },
   };
 }
 
 export default async function ShareDetailPage({ params, searchParams }: Props) {
-  const { slug } = await params;
+  const { slug: rawSlug } = await params;
+  const slug = normalizeSlug(rawSlug);
   const query = searchParams ? await searchParams : {};
   let share = await getShareBySlug(slug);
 
@@ -123,55 +154,10 @@ export default async function ShareDetailPage({ params, searchParams }: Props) {
     }
   }
 
-  // If share not found, render a friendly high-contrast fallback instead of an empty screen
+  // If share truly not found, return real HTTP 404 response
   if (!share) {
-    return (
-      <div className="min-h-screen bg-[#060e1c] text-white flex flex-col font-sans relative z-10 selection:bg-[#00b4d8]/30">
-        <ShareHeader />
-        <main className="flex-1 max-w-2xl w-full mx-auto px-4 py-20 flex flex-col items-center justify-center text-center">
-          <div className="w-16 h-16 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center mb-6 shadow-xl">
-            <AlertCircle className="w-8 h-8 text-amber-400" />
-          </div>
-
-          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[#0a1428] text-[#a6c5e4] border border-[#4d85b6]/30 mb-3">
-            Shared Link Notice
-          </span>
-
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white">
-            Download Link Not Found
-          </h1>
-
-          <p className="mt-3 text-sm text-[#a6c5e4] leading-relaxed max-w-md">
-            The link for <code className="px-2 py-0.5 rounded bg-[#0a1428] text-[#00b4d8] font-mono">/share/{slug}</code> is either expired or hasn’t been published yet.
-          </p>
-
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold bg-[#00b4d8] text-[#060e1c] hover:bg-[#48cae4] transition-all shadow-lg shadow-[#00b4d8]/20"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>Back to MIR Labs Portfolio</span>
-            </Link>
-
-            <Link
-              href="https://www.instagram.com/mir.labs/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-bold bg-[#0a1428] text-[#cfe0f2] border border-[#4d85b6]/40 hover:bg-[#132742] transition-all"
-            >
-              <span>DM on Instagram</span>
-              <ExternalLink className="w-4 h-4 text-[#7aa6d0]" />
-            </Link>
-          </div>
-        </main>
-        <ShareFooter />
-      </div>
-    );
+    notFound();
   }
-
-  // Increment view counter on server load
-  await incrementShareViews(slug);
 
   const metrics = getRealisticMetricsForSlug(share.slug, share.views, share.downloads);
 
@@ -184,20 +170,83 @@ export default async function ShareDetailPage({ params, searchParams }: Props) {
   const displayFileName = share.fileName || `${share.slug}.zip`;
   const displayFileSize = share.fileSize || (share.codeSnippet ? "Direct Source Code" : "ZIP Archive");
 
+  // Schema.org SoftwareSourceCode structured data
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareSourceCode",
+    name: share.title,
+    description: share.description || `Source code and components for ${share.title}`,
+    programmingLanguage: share.language || "TypeScript",
+    codeRepository: "https://github.com/mirlabss",
+    url: getCanonicalUrl(`/share/${share.slug}`),
+    datePublished: share.createdAt,
+    dateModified: share.updatedAt,
+    author: {
+      "@type": "Person",
+      name: share.authorName || "MIR Labs",
+      url: "https://www.instagram.com/mir.labs/",
+    },
+  };
+
+  const breadcrumbsJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Home",
+        item: getCanonicalUrl(),
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Code Vault",
+        item: getCanonicalUrl("/share"),
+      },
+      {
+        "@type": "ListItem",
+        position: 3,
+        name: share.title,
+        item: getCanonicalUrl(`/share/${share.slug}`),
+      },
+    ],
+  };
+
   return (
     <div className="min-h-screen bg-[#060e1c] text-white flex flex-col font-sans relative z-10 selection:bg-[#00b4d8]/30 selection:text-white">
+      {/* Structured Data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbsJsonLd) }}
+      />
+
       <ShareHeader />
 
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 pt-8 pb-20">
         {/* Navigation Bar */}
-        <div className="flex items-center justify-between gap-4 mb-6">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-xs font-semibold text-[#a6c5e4] hover:text-white transition-colors px-3 py-1.5 rounded-lg bg-[#0a1428] border border-[#4d85b6]/30 hover:border-[#00b4d8]/50"
-          >
-            <ArrowLeft className="w-3.5 h-3.5 text-[#00b4d8]" />
-            <span>Explore MIR Labs 3D Portfolio</span>
-          </Link>
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+          <div className="flex items-center gap-2">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-2 text-xs font-semibold text-[#a6c5e4] hover:text-white transition-colors px-3 py-1.5 rounded-lg bg-[#0a1428] border border-[#4d85b6]/30 hover:border-[#00b4d8]/50"
+            >
+              <ArrowLeft className="w-3.5 h-3.5 text-[#00b4d8]" />
+              <span>3D Portfolio</span>
+            </Link>
+
+            <Link
+              href="/share"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#cfe0f2] hover:text-white transition-colors px-3 py-1.5 rounded-lg bg-[#0a1428] border border-[#4d85b6]/30 hover:border-[#00b4d8]/50"
+            >
+              <FolderOpen className="w-3.5 h-3.5 text-[#00b4d8]" />
+              <span>All Shares</span>
+            </Link>
+          </div>
 
           {/* Interactive Top Corner Metrics with Instant Live Updates */}
           <ShareMetricsBadge
@@ -206,6 +255,7 @@ export default async function ShareDetailPage({ params, searchParams }: Props) {
             initialDownloads={metrics.downloads}
           />
         </div>
+
 
         {/* HERO DOWNLOAD PORTAL CARD */}
         <div className="relative rounded-3xl p-6 sm:p-10 bg-[#0a1428] border border-[#4d85b6]/40 shadow-2xl overflow-hidden mb-8">

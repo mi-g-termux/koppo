@@ -71,6 +71,10 @@ export default function ShareFooter() {
               Portfolio
             </Link>
             <span>•</span>
+            <Link href="/share" className="hover:text-white transition-colors">
+              Code Vault
+            </Link>
+            <span>•</span>
             <Link href="https://www.instagram.com/mir.labs/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
               Instagram
             </Link>

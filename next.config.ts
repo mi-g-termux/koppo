@@ -43,10 +43,14 @@ const nextConfig: NextConfig = {
     ],
   },
 
-  // Emits a minimal server bundle at `.next/standalone/` so the Docker
-  // runtime image can drop npm/node_modules entirely and just run
-  // `node server.js`. Trims the final image to ~100 MB.
-  output: "standalone",
+  // Emits a minimal server bundle at `.next/standalone/` in Docker / Linux
+  // environments so the Docker runtime image can run `node server.js`.
+  // Automatically disabled on Windows local development/builds to avoid the
+  // known Windows nft path separator bug.
+  output:
+    process.env.NEXT_STANDALONE === "true" || process.platform !== "win32"
+      ? "standalone"
+      : undefined,
 
   async headers() {
     return [

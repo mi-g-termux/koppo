@@ -101,6 +101,29 @@ export async function createPresignedUploadUrl(
 }
 
 /**
+ * Generate a presigned GET URL for securely downloading Cloudflare R2 assets
+ * Sets attachment Content-Disposition header and expires automatically.
+ */
+export async function createPresignedDownloadUrl(
+  key: string,
+  fileName?: string,
+  expiresIn: number = 3600 // 1 hour
+): Promise<string> {
+  const config = getR2Config();
+  const client = getR2Client();
+
+  const command = new GetObjectCommand({
+    Bucket: config.bucketName,
+    Key: key,
+    ResponseContentDisposition: fileName
+      ? `attachment; filename="${fileName.replace(/"/g, "")}"`
+      : "attachment",
+  });
+
+  return await getSignedUrl(client, command, { expiresIn });
+}
+
+/**
  * Delete a file from Cloudflare R2 bucket
  */
 export async function deleteR2File(key: string) {

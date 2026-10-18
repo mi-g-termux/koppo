@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getShareBySlug, incrementShareDownloads } from "@/lib/shares";
+import { createPresignedDownloadUrl, isR2Configured } from "@/lib/r2";
 
 /**
  * Auto transform Google Drive preview URLs into direct 1-click download links
@@ -21,6 +22,15 @@ function normalizeDirectDownloadUrl(url: string): string {
   return url;
 }
 
+function isValidHttpUrl(stringUrl: string): boolean {
+  try {
+    const parsed = new URL(stringUrl);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
@@ -32,8 +42,15 @@ export async function GET(
 
     if (!share) {
       if (queryFileUrl) {
-        const directUrl = normalizeDirectDownloadUrl(decodeURIComponent(queryFileUrl));
-        return NextResponse.redirect(directUrl);
+        const decodedUrl = decodeURIComponent(queryFileUrl).trim();
+        if (isValidHttpUrl(decodedUrl)) {
+          const directUrl = normalizeDirectDownloadUrl(decodedUrl);
+          return NextResponse.redirect(new URL(directUrl));
+        }
+        return NextResponse.json(
+          { success: false, error: "Invalid download URL provided." },
+          { status: 400 }
+        );
       }
       return NextResponse.json(
         { success: false, error: "Share not found." },
@@ -41,32 +58,57 @@ export async function GET(
       );
     }
 
-    if (!share.fileUrl) {
-      if (share.codeSnippet) {
-        await incrementShareDownloads(slug);
-        const ext = share.language === "tsx" ? "tsx" : share.language === "python" ? "py" : share.language === "jsx" ? "jsx" : share.language === "html" ? "html" : "ts";
-        const downloadName = share.fileName ? (share.fileName.endsWith(".zip") ? share.fileName.replace(/\.zip$/, `.${ext}`) : share.fileName) : `${share.slug}.${ext}`;
-        return new NextResponse(share.codeSnippet, {
-          headers: {
-            "Content-Type": "text/plain; charset=utf-8",
-            "Content-Disposition": `attachment; filename="${downloadName}"`,
-          },
-        });
-      }
-
-      return NextResponse.json(
-        { success: false, error: "No downloadable file or code attached to this share." },
-        { status: 400 }
+    // 1. If stored in Cloudflare R2 bucket with object key
+    if (share.fileKey && isR2Configured()) {
+      await incrementShareDownloads(slug);
+      const presignedDownload = await createPresignedDownloadUrl(
+        share.fileKey,
+        share.fileName || `${share.slug}.zip`
       );
+      return NextResponse.redirect(new URL(presignedDownload));
     }
 
-    // Increment download metric
-    await incrementShareDownloads(slug);
+    // 2. Direct external fileUrl (Google Drive, Dropbox, R2 CDN)
+    if (share.fileUrl) {
+      await incrementShareDownloads(slug);
+      const directDownloadUrl = normalizeDirectDownloadUrl(share.fileUrl.trim());
+      if (isValidHttpUrl(directDownloadUrl)) {
+        return NextResponse.redirect(new URL(directDownloadUrl));
+      }
+    }
 
-    const directDownloadUrl = normalizeDirectDownloadUrl(share.fileUrl);
+    // 3. Fallback: Download raw Code Snippet if present
+    if (share.codeSnippet) {
+      await incrementShareDownloads(slug);
+      const ext =
+        share.language === "tsx"
+          ? "tsx"
+          : share.language === "python"
+          ? "py"
+          : share.language === "jsx"
+          ? "jsx"
+          : share.language === "html"
+          ? "html"
+          : "ts";
+      const rawName = share.fileName
+        ? share.fileName.endsWith(".zip")
+          ? share.fileName.replace(/\.zip$/, `.${ext}`)
+          : share.fileName
+        : `${share.slug}.${ext}`;
+      const safeDownloadName = rawName.replace(/["\r\n\\]/g, "");
 
-    // Redirect to the direct file URL
-    return NextResponse.redirect(directDownloadUrl);
+      return new NextResponse(share.codeSnippet, {
+        headers: {
+          "Content-Type": "text/plain; charset=utf-8",
+          "Content-Disposition": `attachment; filename="${safeDownloadName}"`,
+        },
+      });
+    }
+
+    return NextResponse.json(
+      { success: false, error: "No downloadable file or code attached to this share." },
+      { status: 400 }
+    );
   } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : "Failed to process download";
     console.error("API GET /api/share/download/[slug] error:", err);
@@ -76,3 +118,4 @@ export async function GET(
     );
   }
 }
+

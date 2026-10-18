@@ -26,6 +26,13 @@ export default function ShareHeader() {
         {/* Right Navigation & CTAs */}
         <div className="flex items-center gap-2 sm:gap-3">
           <Link
+            href="/share"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-[#cfe0f2] bg-[#0a1428] hover:bg-[#132742] border border-[#4d85b6]/30 hover:border-[#00b4d8]/50 transition-all cursor-pointer"
+          >
+            <span>Code Vault</span>
+          </Link>
+
+          <Link
             href="https://www.instagram.com/mir.labs/"
             target="_blank"
             rel="noopener noreferrer"

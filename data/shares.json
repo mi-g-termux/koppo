@@ -10,13 +10,19 @@
     "fileName": "otppo.zip",
     "fileSize": "6KB",
     "fileKey": "",
-    "tags": ["React", "OTP", "Form", "TypeScript", "TailwindCSS"],
+    "tags": [
+      "React",
+      "OTP",
+      "Form",
+      "TypeScript",
+      "TailwindCSS"
+    ],
     "isPublic": true,
     "authorName": "MIR Labs",
     "authorInstagram": "https://www.instagram.com/mir.labs/",
     "id": "share_1791089772382_dmwr1",
-    "views": 6004,
-    "downloads": 1694,
+    "views": 6005,
+    "downloads": 1695,
     "createdAt": "2026-10-04T04:56:12.382Z",
     "updatedAt": "2026-10-04T04:56:12.382Z"
   },
@@ -31,7 +37,12 @@
     "fileName": "fly.zip",
     "fileSize": "10 KB",
     "fileKey": "",
-    "tags": ["React", "Framer Motion", "E-Commerce", "Animation"],
+    "tags": [
+      "React",
+      "Framer Motion",
+      "E-Commerce",
+      "Animation"
+    ],
     "isPublic": true,
     "authorName": "MIR Labs",
     "authorInstagram": "https://www.instagram.com/mir.labs/",
@@ -52,7 +63,12 @@
     "fileName": "lamplogin.zip",
     "fileSize": "8 KB",
     "fileKey": "",
-    "tags": ["React", "Framer Motion", "Login", "Animation"],
+    "tags": [
+      "React",
+      "Framer Motion",
+      "Login",
+      "Animation"
+    ],
     "isPublic": true,
     "authorName": "MIR Labs",
     "authorInstagram": "https://www.instagram.com/mir.labs/",
@@ -73,7 +89,12 @@
     "fileName": "otpci.zip",
     "fileSize": "7KB",
     "fileKey": "",
-    "tags": ["React", "TypeScript", "OTP", "UI Component"],
+    "tags": [
+      "React",
+      "TypeScript",
+      "OTP",
+      "UI Component"
+    ],
     "isPublic": true,
     "authorName": "MIR Labs",
     "authorInstagram": "https://www.instagram.com/mir.labs/",

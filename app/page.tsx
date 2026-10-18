@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 
 const FrozenKeyboard = dynamic(() => import("@/components/FrozenKeyboard"), {
   ssr: false,
@@ -302,6 +303,14 @@ export default function Home() {
             </span>
           </div>
           <div className="flex items-center gap-2 pointer-events-auto">
+            <Link
+              href="/share"
+              data-cursor="hover"
+              className="frost-btn !py-1.5 !px-3 !text-xs flex items-center gap-1.5"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-ice-300" />
+              <span>Code Vault</span>
+            </Link>
             <SeasonPicker />
             <span className="hidden md:inline-flex">
               <a href={GITHUB} target="_blank" rel="noopener noreferrer" data-cursor="hover" className="frost-btn !py-1.5 !px-3 !text-xs">
@@ -339,6 +348,15 @@ export default function Home() {
                 <a href="/cv_en.pdf" target="_blank" rel="noopener noreferrer" data-cursor="hover" data-magnetic className="frost-btn frost-btn--primary">
                   {t("hero.cv")}
                 </a>
+                <Link
+                  href="/share"
+                  data-cursor="hover"
+                  data-magnetic
+                  className="frost-btn flex items-center gap-1.5"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-ice-300" />
+                  <span>Code Vault</span>
+                </Link>
                 <button type="button" data-cursor="hover" data-magnetic className="frost-btn" onClick={() => document.querySelector<HTMLElement>('[data-kb-section="contact"]')?.scrollIntoView({ behavior: "smooth", block: "start" })}>
                   {t("hero.hire")}
                 </button>

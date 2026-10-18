@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { Check, Share2 } from "lucide-react";
+import { getCanonicalUrl } from "@/lib/site";
 
 interface CopyShareLinkButtonProps {
   slug: string;
@@ -12,7 +13,7 @@ export default function CopyShareLinkButton({ slug, title }: CopyShareLinkButton
   const [copied, setCopied] = useState(false);
 
   const handleShare = async () => {
-    const url = typeof window !== "undefined" ? `${window.location.origin}/share/${slug}` : `/share/${slug}`;
+    const url = getCanonicalUrl(`/share/${slug}`);
 
     if (navigator.share) {
       try {
